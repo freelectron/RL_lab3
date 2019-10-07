@@ -7,7 +7,7 @@ import gym
 
 
 def main(params):
-    env = gym.make('MountainCarContinuous-v0')
+    env = gym.make('MountainCar-v0')
 
     if params['buffer'] == ReplayBuffer:
         buffer = params['buffer'](params['buffer_size'])
@@ -19,7 +19,7 @@ def main(params):
     if params['algorithm'] == DQN:
         print(env.action_space)
         algorithm = params['algorithm'](env.observation_space[0],
-                                        env.action_space[0],
+                                        env.action_space.n,
                                         optimizer=params['optimizer'],
                                         lr=params['lr'],
                                         gamma=params['gamma'],
