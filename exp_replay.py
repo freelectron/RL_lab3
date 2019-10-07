@@ -69,7 +69,7 @@ class ReplayBuffer(object):
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, size, alpha):
+    def __init__(self, size, alpha, beta):
         """Create Prioritized Replay buffer.
 
         Parameters
@@ -80,6 +80,9 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         alpha: float
             how much prioritization is used
             (0 - no prioritization, 1 - full prioritization)
+        beta: float
+            To what degree to use importance weights
+            (0 - no corrections, 1 - full correction)
 
         See Also
         --------
@@ -88,6 +91,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         super(PrioritizedReplayBuffer, self).__init__(size)
         assert alpha >= 0
         self._alpha = alpha
+        assert beta > 0
+        self._beta = beta
 
         it_capacity = 1
         while it_capacity < size:
@@ -114,7 +119,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             res.append(idx)
         return res
 
-    def sample(self, batch_size, beta):
+    def sample(self, batch_size):
         """Sample a batch of experiences.
 
         compared to ReplayBuffer.sample
@@ -126,9 +131,6 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         ----------
         batch_size: int
             How many transitions to sample.
-        beta: float
-            To what degree to use importance weights
-            (0 - no corrections, 1 - full correction)
 
         Returns
         -------
@@ -150,17 +152,16 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             Array of shape (batch_size,) and dtype np.int32
             idexes in buffer of sampled experiences
         """
-        assert beta > 0
 
         idxes = self._sample_proportional(batch_size)
 
         weights = []
         p_min = self._it_min.min() / self._it_sum.sum()
-        max_weight = (p_min * len(self._storage)) ** (-beta)
+        max_weight = (p_min * len(self._storage)) ** (-self._beta)
 
         for idx in idxes:
             p_sample = self._it_sum[idx] / self._it_sum.sum()
-            weight = (p_sample * len(self._storage)) ** (-beta)
+            weight = (p_sample * len(self._storage)) ** (-self._beta)
             weights.append(weight / max_weight)
         weights = np.array(weights)
         encoded_sample = self._encode_sample(idxes)
