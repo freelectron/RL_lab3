@@ -4,11 +4,12 @@ from torch.nn.modules import MSELoss
 import numpy as np
 from exp_replay import ReplayBuffer, PrioritizedReplayBuffer
 from dqn import DQN
+from dqn_other import algo_DQN
 import gym
-
+import matplotlib.pyplot as plt
 
 def main(params):
-    env = gym.make('MountainCar-v0')
+    env = gym.make("CartPole-v0")
 
     if params['buffer'] == ReplayBuffer:
         buffer = ReplayBuffer(params['buffer_size'])
@@ -26,10 +27,13 @@ def main(params):
                         gamma=params['gamma'],
                         epsilon_delta=params['epsilon_delta'],
                         epsilon_min=params['epsilon_min'])
+    elif params['algorithm'] == algo_DQN:
+        algorithm = algo_DQN()
     else:
         raise ValueError('Algorithm type not found.')
     losses = []
     returns = []
+    episodes_length = []
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
         obs_t = env.reset()
@@ -37,7 +41,7 @@ def main(params):
         episode_loss = []
         episode_rewards = []
         while True:
-            env.render()
+            # env.render()
             action = algorithm.predict(obs_t)
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
@@ -47,25 +51,40 @@ def main(params):
                 batch = buffer.sample(params['batch_size'])
                 loss = algorithm.train(*batch)
                 episode_loss.append(loss)
-                algorithm.update_epsilon()
+                if not isinstance(algorithm, algo_DQN):
+                    # this func is not implemented for other_DWN
+                    algorithm.update_epsilon()
             if done:
-                env.render()
+                episodes_length.append(t)
+                # env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cumm reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
             obs_t = obs_tp1
-        algorithm.update_target_network()
+        if not isinstance(algorithm, algo_DQN):
+            # this func is not implemented for other_DWN
+            algorithm.update_target_network()
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
     env.close()
 
+    ## ====== Evaluation ========
+    # And see the results
+    def smooth(x, N):
+        cumsum = np.cumsum(np.insert(x, 0, 0))
+        return (cumsum[N:] - cumsum[:-N]) / float(N)
+
+    plt.plot(smooth(episodes_length, 10))
+    plt.title('Episode durations per episode')
+    plt.show()
+
 
 if __name__ == '__main__':
     parameters = {'buffer': ReplayBuffer,
-                  'buffer_size': 1000,
+                  'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
-                  'algorithm': DQN,
+                  'algorithm': algo_DQN,
                   'batch_size': 64,
                   'optimizer': SGD,
                   'loss_function': MSELoss,
@@ -75,5 +94,5 @@ if __name__ == '__main__':
                   'epsilon_min': 0.05,
                   'target_network_interval': 500,
                   'environment': 'MountainCarContinuous-v0',
-                  'episodes': 1000}
+                  'episodes': 700}
     main(parameters)
