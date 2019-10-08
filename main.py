@@ -4,7 +4,9 @@ from torch.nn.modules import MSELoss
 import numpy as np
 from exp_replay import ReplayBuffer, PrioritizedReplayBuffer
 from dqn import DQN
+from dqn_other import algo_DQN
 import gym
+import matplotlib.pyplot as plt
 
 
 def update(algorithm, buffer, params, train_steps):
@@ -19,9 +21,11 @@ def update(algorithm, buffer, params, train_steps):
         loss = batch_loss.mean().item()
     else:
         raise ValueError('?????')
-    algorithm.update_epsilon()
-    if train_steps % params['target_network_interval'] == 0:
-        algorithm.update_target_network()
+    if not isinstance(algorithm, algo_DQN):
+        # this func is not implemented for other_DWN
+        algorithm.update_epsilon()
+        if train_steps % params['target_network_interval'] == 0:
+            algorithm.update_target_network()
     return loss
 
 
@@ -46,11 +50,14 @@ def main(params):
                         gamma=params['gamma'],
                         epsilon_delta=params['epsilon_delta'],
                         epsilon_min=params['epsilon_min'])
+    elif params['algorithm'] == algo_DQN:
+        algorithm = algo_DQN()
     else:
         raise ValueError('Algorithm type not found.')
     losses = []
     returns = []
     train_steps = 0
+    episodes_length = []
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
         obs_t = env.reset()
@@ -58,7 +65,7 @@ def main(params):
         episode_loss = []
         episode_rewards = []
         while True:
-            env.render()
+            # env.render()
             action = algorithm.predict(obs_t)
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
@@ -69,31 +76,41 @@ def main(params):
                 loss = update(algorithm, buffer, params, train_steps)
                 episode_loss.append(loss)
             if done:
-                env.render()
+                episodes_length.append(t)
+                # env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cumm reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
             obs_t = obs_tp1
-
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
     env.close()
 
+    ## ====== Evaluation ========
+    # And see the results
+    def smooth(x, N):
+        cumsum = np.cumsum(np.insert(x, 0, 0))
+        return (cumsum[N:] - cumsum[:-N]) / float(N)
+
+    plt.plot(smooth(episodes_length, 10))
+    plt.title('Episode durations per episode')
+    plt.show()
+
 
 if __name__ == '__main__':
     parameters = {'buffer': ReplayBuffer,
-                  'buffer_size': 1000,
+                  'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
                   'algorithm': DQN,
                   'batch_size': 64,
-                  'optimizer': SGD,
+                  'optimizer': Adam,
                   'loss_function': MSELoss,
-                  'lr': 0.01,
-                  'gamma': 0.99,
-                  'epsilon_delta': 0.0001,
-                  'epsilon_min': 0.05,
-                  'target_network_interval': 200,
+                  'lr': 1e-3,
+                  'gamma': 0.8,
+                  'epsilon_delta': 1e-4,
+                  'epsilon_min': 0.10,
+                  'target_network_interval': 100,
                   'environment': 'MountainCarContinuous-v0',
-                  'episodes': 1000}
+                  'episodes': 400}
     main(parameters)

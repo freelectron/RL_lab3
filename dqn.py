@@ -19,15 +19,15 @@ class QNetwork(nn.Module):
 
 
 class DQN(object):
-    def __init__(self, input_size, output_size, loss_function, optimizer=SGD, lr=0.01, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
+    def __init__(self, input_size, output_size, loss_function, optimizer=SGD, lr=0.001, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
         self.input_size = input_size
         self.output_size = output_size
         self.gamma = gamma
         self.epsilon_min = epsilon_min
         self.epsilon_delta = epsilon_delta
         self.epsilon = 1.0
-        self.q_network = QNetwork(input_size, output_size, num_hidden=32)
-        self.target_q_network = QNetwork(input_size, output_size, num_hidden=32)
+        self.q_network = QNetwork(input_size, output_size, num_hidden=64)
+        self.target_q_network = QNetwork(input_size, output_size, num_hidden=64)
         self.update_target_network()
         self.optimizer = optimizer(self.q_network.parameters(), lr=lr)
         self.loss_function = loss_function
@@ -53,48 +53,48 @@ class DQN(object):
 
     def predict(self, obs, eval=False):
         obs = self.check_obs(obs)
+        with torch.no_grad():
+            q_values = self.q_network(obs)
+            if eval:
+                return torch.argmax(q_values).item()
 
-        q_values = self.q_network(obs)
-        if eval:
-            return torch.argmax(q_values).item()
-
-        if random.random() < self.epsilon:
-            action = random.randint(0, self.output_size-1)
-        else:
-            action = torch.argmax(q_values).item()
+            if random.random() < self.epsilon:
+                action = random.randint(0, self.output_size-1)
+            else:
+                action = torch.argmax(q_values).item()
         return action
 
     def train(self, obses_t, actions, rewards, obses_tp1, dones):
         # Convert to torch.tensor
-        obses_t = self.check_obs(obses_t)
+        obses_t = torch.from_numpy(obses_t).to(torch.float32)
         actions = torch.from_numpy(actions).to(torch.long)
         rewards = torch.from_numpy(rewards).to(torch.float32)
-        obses_tp1 = self.check_obs(obses_tp1)
+        obses_tp1 = torch.from_numpy(obses_tp1).to(torch.float32)
         dones = torch.from_numpy(dones).to(torch.float32)
         batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
-        self.optimizer.zero_grad()
         predictions = self.q_network(obses_t)[batch_range, actions]
-        targets = rewards + self.gamma * dones * self.target_q_network(obses_tp1)[batch_range, actions]
+        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0]
         loss = self.loss_function(predictions, targets)
         # Backprop
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         return loss.item()
 
     def per_train(self, obses_t, actions, rewards, obses_tp1, dones, importance_weights):
         # Convert to torch.tensor
-        obses_t = self.check_obs(obses_t)
+        obses_t = torch.from_numpy(obses_t).to(torch.float32)
         actions = torch.from_numpy(actions).to(torch.long)
         rewards = torch.from_numpy(rewards).to(torch.float32)
-        obses_tp1 = self.check_obs(obses_tp1)
+        obses_tp1 = torch.from_numpy(obses_tp1).to(torch.float32)
         dones = torch.from_numpy(dones).to(torch.float32)
         importance_weights = torch.from_numpy(importance_weights)
         batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
         self.optimizer.zero_grad()
         predictions = self.q_network(obses_t)[batch_range, actions]
-        targets = rewards + self.gamma * dones * self.target_q_network(obses_tp1)[batch_range, actions]
+        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0]
         loss = self.loss_function(predictions, targets)
         loss *= importance_weights
         # Backprop
