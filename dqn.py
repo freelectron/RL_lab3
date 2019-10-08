@@ -8,9 +8,14 @@ from torch.optim import SGD
 
 class QNetwork(nn.Module):
 
-    def __init__(self, num_input, num_output, num_hidden=64):
+    def __init__(self, num_input, num_output, num_hidden=(64,)):
         super().__init__()
-        layers = [nn.Linear(num_input, num_hidden), nn.ReLU(), nn.Linear(num_hidden, num_output)]
+        layers = []
+        layer_n = (num_input, *num_hidden, num_output)
+        for i in range(len(layer_n[:-1])):
+            layers.append(nn.Linear(layer_n[i], layer_n[i+1]))
+            if i < len(layer_n) - 1:
+                layers.append(nn.ReLU())
         self.network = nn.Sequential(*layers)
         self.d_type = self.network.state_dict()['0.weight'].type()
 
@@ -19,15 +24,15 @@ class QNetwork(nn.Module):
 
 
 class DQN(object):
-    def __init__(self, input_size, output_size, loss_function, optimizer=SGD, lr=0.001, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
+    def __init__(self, input_size, output_size, loss_function, num_hidden=(64,), optimizer=SGD, lr=0.001, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
         self.input_size = input_size
         self.output_size = output_size
         self.gamma = gamma
         self.epsilon_min = epsilon_min
         self.epsilon_delta = epsilon_delta
         self.epsilon = 1.0
-        self.q_network = QNetwork(input_size, output_size, num_hidden=64)
-        self.target_q_network = QNetwork(input_size, output_size, num_hidden=64)
+        self.q_network = QNetwork(input_size, output_size, num_hidden=num_hidden)
+        self.target_q_network = QNetwork(input_size, output_size, num_hidden=num_hidden)
         self.update_target_network()
         self.optimizer = optimizer(self.q_network.parameters(), lr=lr)
         self.loss_function = loss_function
@@ -74,7 +79,7 @@ class DQN(object):
         batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
         predictions = self.q_network(obses_t)[batch_range, actions]
-        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0]
+        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0].detach()
         loss = self.loss_function(predictions, targets)
         # Backprop
         self.optimizer.zero_grad()
@@ -89,18 +94,18 @@ class DQN(object):
         rewards = torch.from_numpy(rewards).to(torch.float32)
         obses_tp1 = torch.from_numpy(obses_tp1).to(torch.float32)
         dones = torch.from_numpy(dones).to(torch.float32)
-        importance_weights = torch.from_numpy(importance_weights)
+        importance_weights = torch.from_numpy(importance_weights).to(torch.float32)
         batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
         self.optimizer.zero_grad()
         predictions = self.q_network(obses_t)[batch_range, actions]
-        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0]
-        loss = self.loss_function(predictions, targets)
-        loss *= importance_weights
+        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0].detach()
+        losses = self.loss_function(predictions, targets)
+        loss = (losses * importance_weights).mean()
         # Backprop
         loss.backward()
         self.optimizer.step()
-        return loss
+        return loss.item(), torch.abs(predictions - targets).detach()
 
     def update_epsilon(self):
         self.epsilon = max(self.epsilon - self.epsilon_delta, self.epsilon_min)

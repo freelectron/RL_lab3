@@ -1,6 +1,6 @@
 import torch
 from torch.optim import SGD, Adam
-from torch.nn.modules import MSELoss
+from torch.nn.modules import MSELoss, L1Loss
 import numpy as np
 from exp_replay import ReplayBuffer, PrioritizedReplayBuffer
 from dqn import DQN
@@ -16,9 +16,8 @@ def update(algorithm, buffer, params, train_steps):
         loss = algorithm.train(obses_t, a, r, obses_tp1, dones)
     elif type(buffer) == PrioritizedReplayBuffer:
         obses_t, a, r, obses_tp1, dones, importance_weights, idxs = batch
-        batch_loss = algorithm.per_train(obses_t, a, r, obses_tp1, dones, importance_weights)
-        buffer.update_priorities(idxs, batch_loss.numpy() + 1e-8)
-        loss = batch_loss.mean().item()
+        loss, losses = algorithm.per_train(obses_t, a, r, obses_tp1, dones, importance_weights)
+        buffer.update_priorities(idxs, losses.numpy() + 1e-8)
     else:
         raise ValueError('?????')
     if not isinstance(algorithm, algo_DQN):
@@ -34,10 +33,10 @@ def main(params):
 
     if params['buffer'] == ReplayBuffer:
         buffer = ReplayBuffer(params['buffer_size'])
-        loss_function = MSELoss()
+        loss_function = params['loss_function']()
     elif params['buffer'] == PrioritizedReplayBuffer:
-        buffer = PrioritizedReplayBuffer(params['buffer_size'], params['PER_alpha'])
-        loss_function = MSELoss(reduction='none')
+        buffer = PrioritizedReplayBuffer(params['buffer_size'], params['PER_alpha'], params['PER_beta'])
+        loss_function = params['loss_function'](reduction='none')
     else:
         raise ValueError('Buffer type not found.')
 
@@ -98,19 +97,20 @@ def main(params):
 
 
 if __name__ == '__main__':
-    parameters = {'buffer': ReplayBuffer,
+    parameters = {'buffer': PrioritizedReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
                   'algorithm': DQN,
                   'batch_size': 64,
+                  'hidden_size': (64,),
                   'optimizer': Adam,
                   'loss_function': MSELoss,
                   'lr': 1e-3,
                   'gamma': 0.8,
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
-                  'target_network_interval': 100,
+                  'target_network_interval': 50,
                   'environment': 'MountainCarContinuous-v0',
                   'episodes': 400}
     main(parameters)
