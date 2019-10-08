@@ -19,7 +19,7 @@ class QNetwork(nn.Module):
 
 
 class DQN(object):
-    def __init__(self, input_size, output_size, optimizer=SGD, loss=MSELoss, lr=0.01, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
+    def __init__(self, input_size, output_size, loss_function, optimizer=SGD, lr=0.01, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
         self.input_size = input_size
         self.output_size = output_size
         self.gamma = gamma
@@ -30,7 +30,7 @@ class DQN(object):
         self.target_q_network = QNetwork(input_size, output_size, num_hidden=32)
         self.update_target_network()
         self.optimizer = optimizer(self.q_network.parameters(), lr=lr)
-        self.loss_function = loss()
+        self.loss_function = loss_function
 
     def check_obs(self, obs):
         # Check that obs is a tensor
@@ -71,7 +71,7 @@ class DQN(object):
         rewards = torch.from_numpy(rewards).to(torch.float32)
         obses_tp1 = self.check_obs(obses_tp1)
         dones = torch.from_numpy(dones).to(torch.float32)
-        batch_range = torch.range(0, actions.shape[0]-1, dtype=torch.long)
+        batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
         self.optimizer.zero_grad()
         predictions = self.q_network(obses_t)[batch_range, actions]
@@ -81,6 +81,26 @@ class DQN(object):
         loss.backward()
         self.optimizer.step()
         return loss.item()
+
+    def per_train(self, obses_t, actions, rewards, obses_tp1, dones, importance_weights):
+        # Convert to torch.tensor
+        obses_t = self.check_obs(obses_t)
+        actions = torch.from_numpy(actions).to(torch.long)
+        rewards = torch.from_numpy(rewards).to(torch.float32)
+        obses_tp1 = self.check_obs(obses_tp1)
+        dones = torch.from_numpy(dones).to(torch.float32)
+        importance_weights = torch.from_numpy(importance_weights)
+        batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
+        # Calculate loss
+        self.optimizer.zero_grad()
+        predictions = self.q_network(obses_t)[batch_range, actions]
+        targets = rewards + self.gamma * dones * self.target_q_network(obses_tp1)[batch_range, actions]
+        loss = self.loss_function(predictions, targets)
+        loss *= importance_weights
+        # Backprop
+        loss.backward()
+        self.optimizer.step()
+        return loss
 
     def update_epsilon(self):
         self.epsilon = max(self.epsilon - self.epsilon_delta, self.epsilon_min)

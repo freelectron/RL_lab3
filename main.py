@@ -7,21 +7,41 @@ from dqn import DQN
 import gym
 
 
+def update(algorithm, buffer, params, train_steps):
+    batch = buffer.sample(params['batch_size'])
+    if type(buffer) == ReplayBuffer:
+        obses_t, a, r, obses_tp1, dones = batch
+        loss = algorithm.train(obses_t, a, r, obses_tp1, dones)
+    elif type(buffer) == PrioritizedReplayBuffer:
+        obses_t, a, r, obses_tp1, dones, importance_weights, idxs = batch
+        batch_loss = algorithm.per_train(obses_t, a, r, obses_tp1, dones, importance_weights)
+        buffer.update_priorities(idxs, batch_loss.numpy() + 1e-8)
+        loss = batch_loss.mean().item()
+    else:
+        raise ValueError('?????')
+    algorithm.update_epsilon()
+    if train_steps % params['target_network_interval'] == 0:
+        algorithm.update_target_network()
+    return loss
+
+
 def main(params):
-    env = gym.make('MountainCar-v0')
+    env = gym.make('CartPole-v0')
 
     if params['buffer'] == ReplayBuffer:
         buffer = ReplayBuffer(params['buffer_size'])
+        loss_function = MSELoss()
     elif params['buffer'] == PrioritizedReplayBuffer:
         buffer = PrioritizedReplayBuffer(params['buffer_size'], params['PER_alpha'])
+        loss_function = MSELoss(reduction='none')
     else:
         raise ValueError('Buffer type not found.')
 
     if params['algorithm'] == DQN:
         algorithm = DQN(env.observation_space.shape[0],
                         env.action_space.n,
+                        loss_function=loss_function,
                         optimizer=params['optimizer'],
-                        loss=params['loss_function'],
                         lr=params['lr'],
                         gamma=params['gamma'],
                         epsilon_delta=params['epsilon_delta'],
@@ -30,6 +50,7 @@ def main(params):
         raise ValueError('Algorithm type not found.')
     losses = []
     returns = []
+    train_steps = 0
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
         obs_t = env.reset()
@@ -44,17 +65,16 @@ def main(params):
             episode_rewards.append(reward)
             buffer.add(obs_t, action, reward, obs_tp1, done)
             if len(buffer) >= params['batch_size']:
-                batch = buffer.sample(params['batch_size'])
-                loss = algorithm.train(*batch)
+                train_steps += 1
+                loss = update(algorithm, buffer, params, train_steps)
                 episode_loss.append(loss)
-                algorithm.update_epsilon()
             if done:
                 env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cumm reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
             obs_t = obs_tp1
-        algorithm.update_target_network()
+
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
     env.close()
@@ -73,7 +93,7 @@ if __name__ == '__main__':
                   'gamma': 0.99,
                   'epsilon_delta': 0.0001,
                   'epsilon_min': 0.05,
-                  'target_network_interval': 500,
+                  'target_network_interval': 200,
                   'environment': 'MountainCarContinuous-v0',
                   'episodes': 1000}
     main(parameters)
