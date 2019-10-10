@@ -1,10 +1,9 @@
-import torch
-from torch.optim import SGD, Adam
-from torch.nn.modules import MSELoss, L1Loss
+from torch.optim import Adam
+from torch.nn.modules import MSELoss
 import numpy as np
-from exp_replay import ReplayBuffer, PrioritizedReplayBuffer
-from dqn import DQN
-from dqn_other import algo_DQN
+from experience_replay.exp_replay import ReplayBuffer, PrioritizedReplayBuffer
+from algorithms.dqn import DQN
+from algorithms.dqn_other import algo_DQN
 import gym
 import matplotlib.pyplot as plt
 
