@@ -83,7 +83,7 @@ class CustomAcrobotEnv(core.Env):
     actions_num = 3
 
     # CUSTOM: goal threshold for each angle comparison, in radians and in range (0, pi]
-    goal_threshold = pi/4
+    goal_threshold = pi / 4
 
     def __init__(self):
         self.viewer = None
@@ -110,7 +110,8 @@ class CustomAcrobotEnv(core.Env):
         Produce goal as random joint angles.
         """
         self.theta1_goal, self.theta2_goal = self.np_random.uniform(low=0, high=2 * pi, size=(2,))
-        return (np.cos(self.theta1_goal), np.sin(self.theta1_goal), np.cos(self.theta2_goal), np.sin(self.theta2_goal))
+        return np.array([np.cos(self.theta1_goal), np.sin(self.theta1_goal),
+                         np.cos(self.theta2_goal), np.sin(self.theta2_goal)])
 
     def step(self, a):
         s = self.state

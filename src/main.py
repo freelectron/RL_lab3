@@ -68,9 +68,11 @@ def main(params):
     else:
         raise ValueError('Buffer type not found.')
 
+    s, g = env.reset()
+
     # select learning algorithm using the parameters
     if params['algorithm'] == DQN:
-        algorithm = DQN(env.observation_space.shape[0]*2,
+        algorithm = DQN(s.shape[0] + g.shape[0],
                         env.action_space.n,
                         loss_function=loss_function,
                         optimizer=params['optimizer'],
@@ -90,7 +92,7 @@ def main(params):
 
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
-        obs_t = env.reset()
+        obs_t, g_t = env.reset()
 
         t = 0
         episode_loss = []
@@ -98,10 +100,10 @@ def main(params):
         episode_transitions = []
         while True:
             # env.render()
-            action = algorithm.predict(np.hstack((obs_t, obs_t)))
+            action = algorithm.predict(np.hstack((obs_t, g_t)))
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
-            episode_transitions.append((obs_t, (0,0,0,0), action, reward, obs_tp1, (0,0,0,0), done))
+            episode_transitions.append((obs_t, g_t, action, reward, obs_tp1, g_t, done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
@@ -150,6 +152,6 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'MountainCarContinuous-v0',
+                  'environment': 'agrobot_custom',
                   'episodes': 400}
     main(parameters)
