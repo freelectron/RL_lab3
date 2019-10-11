@@ -6,10 +6,13 @@ from algorithms.dqn import DQN
 from algorithms.dqn_other import algo_DQN
 import gym
 import matplotlib.pyplot as plt
+from environments.acrobot_custom import CustomAcrobotEnv
 
 
 def update(algorithm, buffer, params, train_steps):
     batch = buffer.sample(params['batch_size'])
+
+    # use training algorithm depending on type of experience replay
     if type(buffer) == ReplayBuffer:
         obses_t, a, r, obses_tp1, dones = batch
         loss = algorithm.train(obses_t, a, r, obses_tp1, dones)
@@ -19,17 +22,22 @@ def update(algorithm, buffer, params, train_steps):
         buffer.update_priorities(idxs, losses.numpy() + 1e-8)
     else:
         raise ValueError('?????')
+
     if not isinstance(algorithm, algo_DQN):
         # this func is not implemented for other_DWN
         algorithm.update_epsilon()
         if train_steps % params['target_network_interval'] == 0:
             algorithm.update_target_network()
+
     return loss
 
 
 def main(params):
     # declare environment
-    env = gym.make('CartPole-v0')
+    if params['environment'] == 'agrobot_custom':
+        env = CustomAcrobotEnv()
+    else:
+        env = gym.make(params['environment'])
 
     # select type of experience replay using the parameters
     if params['buffer'] == ReplayBuffer:
@@ -70,7 +78,7 @@ def main(params):
         episode_rewards = []
 
         while True:
-            # env.render()
+            env.render()
             action = algorithm.predict(obs_t)
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
@@ -86,7 +94,7 @@ def main(params):
             # termination condition
             if done:
                 episodes_length.append(t)
-                # env.render()
+                env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
@@ -124,6 +132,6 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 50,
-                  'environment': 'MountainCarContinuous-v0',
+                  'environment': 'agrobot_custom',  # or CartPole-v0, or agrobot_custom, or MountainCarContinuous-v0
                   'episodes': 400}
     main(parameters)
