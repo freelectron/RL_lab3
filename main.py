@@ -1,8 +1,8 @@
 import torch
-from torch.optim import SGD, Adam
-from torch.nn.modules import MSELoss, L1Loss
+from torch.optim import Adam
+from torch.nn.modules import MSELoss
 import numpy as np
-from exp_replay import ReplayBuffer, PrioritizedReplayBuffer
+from exp_replay import ReplayBuffer, PrioritizedReplayBuffer, HindsightReplayBuffer, PrioritizedHindsightReplayBuffer
 from dqn import DQN
 from dqn_other import algo_DQN
 import gym
@@ -11,21 +11,37 @@ import matplotlib.pyplot as plt
 
 def update(algorithm, buffer, params, train_steps):
     batch = buffer.sample(params['batch_size'])
-    if type(buffer) == ReplayBuffer:
+    if type(buffer) == ReplayBuffer or type(buffer) == HindsightReplayBuffer:
         obses_t, a, r, obses_tp1, dones = batch
         loss = algorithm.train(obses_t, a, r, obses_tp1, dones)
-    elif type(buffer) == PrioritizedReplayBuffer:
+    elif type(buffer) == PrioritizedReplayBuffer or type(buffer) == PrioritizedHindsightReplayBuffer:
         obses_t, a, r, obses_tp1, dones, importance_weights, idxs = batch
         loss, losses = algorithm.per_train(obses_t, a, r, obses_tp1, dones, importance_weights)
         buffer.update_priorities(idxs, losses.numpy() + 1e-8)
     else:
         raise ValueError('?????')
-    if not isinstance(algorithm, algo_DQN):
-        # this func is not implemented for other_DWN
-        algorithm.update_epsilon()
-        if train_steps % params['target_network_interval'] == 0:
-            algorithm.update_target_network()
+    if isinstance(algorithm, algo_DQN):
+        return loss
+    # this func is not implemented for other_DWN
+    algorithm.update_epsilon()
+    if train_steps % params['target_network_interval'] == 0:
+        algorithm.update_target_network()
     return loss
+
+
+def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
+    if type(buffer) == ReplayBuffer or type(buffer) == PrioritizedReplayBuffer:
+        for (f_t, g_t, a, r, f_tp1, g_tp1, done) in transitions:
+            obs_t = np.hstack((f_t, g_t))
+            obs_tp1 = np.hstack((f_tp1, g_tp1))
+            buffer.add(obs_t, a, r, obs_tp1, done)
+    if type(buffer) == HindsightReplayBuffer or type(buffer) == PrioritizedHindsightReplayBuffer:
+        g_prime = transitions[-1][5]
+        # Replace goal of every transition
+        for i, (f_t, _, a, r, f_tp1, _, done) in enumerate(transitions):
+            if i == len(transitions) - 1:
+                r = completion_reward  # Last transition has its reward replaced
+            buffer.add(f_t, g_prime, a, r, f_tp1, g_prime, done)
 
 
 def main(params):
@@ -37,11 +53,17 @@ def main(params):
     elif params['buffer'] == PrioritizedReplayBuffer:
         buffer = PrioritizedReplayBuffer(params['buffer_size'], params['PER_alpha'], params['PER_beta'])
         loss_function = params['loss_function'](reduction='none')
+    elif params['buffer'] == HindsightReplayBuffer:
+        buffer = HindsightReplayBuffer(params['buffer_size'])
+        loss_function = params['loss_function']()
+    elif params['buffer'] == PrioritizedHindsightReplayBuffer:
+        buffer = PrioritizedReplayBuffer(params['buffer_size'], params['PER_alpha'], params['PER_beta'])
+        loss_function = params['loss_function'](reduction='none')
     else:
         raise ValueError('Buffer type not found.')
 
     if params['algorithm'] == DQN:
-        algorithm = DQN(env.observation_space.shape[0],
+        algorithm = DQN(env.observation_space.shape[0]*2,
                         env.action_space.n,
                         loss_function=loss_function,
                         optimizer=params['optimizer'],
@@ -63,13 +85,14 @@ def main(params):
         t = 0
         episode_loss = []
         episode_rewards = []
+        episode_transitions = []
         while True:
             # env.render()
-            action = algorithm.predict(obs_t)
+            action = algorithm.predict(np.hstack((obs_t, obs_t)))
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
+            episode_transitions.append((obs_t, obs_t, action, reward, obs_tp1, obs_tp1, done))
             episode_rewards.append(reward)
-            buffer.add(obs_t, action, reward, obs_tp1, done)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
                 loss = update(algorithm, buffer, params, train_steps)
@@ -81,6 +104,9 @@ def main(params):
                 print('Cumm reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
             obs_t = obs_tp1
+
+        add_transitions_to_buffer(episode_transitions, buffer)
+
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
     env.close()
@@ -97,7 +123,7 @@ def main(params):
 
 
 if __name__ == '__main__':
-    parameters = {'buffer': PrioritizedReplayBuffer,
+    parameters = {'buffer': PrioritizedHindsightReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
@@ -110,7 +136,7 @@ if __name__ == '__main__':
                   'gamma': 0.8,
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
-                  'target_network_interval': 50,
+                  'target_network_interval': 100,
                   'environment': 'MountainCarContinuous-v0',
                   'episodes': 400}
     main(parameters)
