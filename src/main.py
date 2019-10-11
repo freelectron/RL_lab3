@@ -1,10 +1,9 @@
-import torch
 from torch.optim import Adam
 from torch.nn.modules import MSELoss
 import numpy as np
-from exp_replay import ReplayBuffer, PrioritizedReplayBuffer, HindsightReplayBuffer, PrioritizedHindsightReplayBuffer
-from dqn import DQN
-from dqn_other import algo_DQN
+from experience_replay.exp_replay import ReplayBuffer, PrioritizedReplayBuffer, HindsightReplayBuffer, PrioritizedHindsightReplayBuffer
+from algorithms.dqn import DQN
+from algorithms.dqn_other import algo_DQN
 import gym
 import matplotlib.pyplot as plt
 
@@ -45,8 +44,10 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
 
 
 def main(params):
+    # declare environment
     env = gym.make('CartPole-v0')
 
+    # select type of experience replay using the parameters
     if params['buffer'] == ReplayBuffer:
         buffer = ReplayBuffer(params['buffer_size'])
         loss_function = params['loss_function']()
@@ -62,6 +63,7 @@ def main(params):
     else:
         raise ValueError('Buffer type not found.')
 
+    # select learning algorithm using the parameters
     if params['algorithm'] == DQN:
         algorithm = DQN(env.observation_space.shape[0]*2,
                         env.action_space.n,
@@ -75,13 +77,16 @@ def main(params):
         algorithm = algo_DQN()
     else:
         raise ValueError('Algorithm type not found.')
+
     losses = []
     returns = []
     train_steps = 0
     episodes_length = []
+
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
         obs_t = env.reset()
+
         t = 0
         episode_loss = []
         episode_rewards = []
@@ -97,21 +102,24 @@ def main(params):
                 train_steps += 1
                 loss = update(algorithm, buffer, params, train_steps)
                 episode_loss.append(loss)
+
+            # termination condition
             if done:
                 episodes_length.append(t)
                 # env.render()
                 print('Episode finished in', t, 'steps')
-                print('Cumm reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
+                print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
+
             obs_t = obs_tp1
 
         add_transitions_to_buffer(episode_transitions, buffer)
-
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
+
     env.close()
 
-    ## ====== Evaluation ========
+    # ====== Evaluation ========
     # And see the results
     def smooth(x, N):
         cumsum = np.cumsum(np.insert(x, 0, 0))
