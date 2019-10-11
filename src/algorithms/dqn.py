@@ -24,6 +24,7 @@ class QNetwork(nn.Module):
 
 
 class DQN(object):
+
     def __init__(self, input_size, output_size, loss_function, num_hidden=(64,), optimizer=SGD, lr=0.001, gamma=0.99, epsilon_delta=0.0001, epsilon_min=0.05):
         self.input_size = input_size
         self.output_size = output_size

@@ -10,11 +10,11 @@ __credits__ = ["Alborz Geramifard", "Robert H. Klein", "Christoph Dann",
 __license__ = "BSD 3-Clause"
 __author__ = "Christoph Dann <cdann@cdann.de>"
 
+
 # SOURCE:
 # https://github.com/rlpy/rlpy/blob/master/rlpy/Domains/Acrobot.py
 
 class AcrobotEnv(core.Env):
-
     """
     Acrobot is a 2-link pendulum with only the second joint actuated
     Intitially, both links point downwards. The goal is to swing the
@@ -56,7 +56,7 @@ class AcrobotEnv(core.Env):
 
     metadata = {
         'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second' : 15
+        'video.frames_per_second': 15
     }
 
     dt = .2
@@ -153,22 +153,22 @@ class AcrobotEnv(core.Env):
         dtheta1 = s[2]
         dtheta2 = s[3]
         d1 = m1 * lc1 ** 2 + m2 * \
-            (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
+             (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
         d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
         phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.)
         phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)  \
-            + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
+               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2) \
+               + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
         if self.book_or_nips == "nips":
             # the following line is consistent with the description in the
             # paper
             ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                       (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         else:
             # the following line is consistent with the java implementation and the
             # book
             ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) \
-                / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                       / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 
@@ -178,8 +178,8 @@ class AcrobotEnv(core.Env):
         s = self.state
 
         if self.viewer is None:
-            self.viewer = rendering.Viewer(500,500)
-            self.viewer.set_bounds(-2.2,2.2,-2.2,2.2)
+            self.viewer = rendering.Viewer(500, 500)
+            self.viewer.set_bounds(-2.2, 2.2, -2.2, 2.2)
 
         if s is None: return None
 
@@ -189,26 +189,27 @@ class AcrobotEnv(core.Env):
         p2 = [p1[0] - self.LINK_LENGTH_2 * np.cos(s[0] + s[1]),
               p1[1] + self.LINK_LENGTH_2 * np.sin(s[0] + s[1])]
 
-        xys = np.array([[0,0], p1, p2])[:,::-1]
-        thetas = [s[0]-np.pi/2, s[0]+s[1]-np.pi/2]
+        xys = np.array([[0, 0], p1, p2])[:, ::-1]
+        thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
 
         self.viewer.draw_line((-2.2, 1), (2.2, 1))
-        for ((x,y),th) in zip(xys, thetas):
-            l,r,t,b = 0, 1, .1, -.1
-            jtransform = rendering.Transform(rotation=th, translation=(x,y))
-            link = self.viewer.draw_polygon([(l,b), (l,t), (r,t), (r,b)])
+        for ((x, y), th) in zip(xys, thetas):
+            l, r, t, b = 0, 1, .1, -.1
+            jtransform = rendering.Transform(rotation=th, translation=(x, y))
+            link = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
             link.add_attr(jtransform)
-            link.set_color(0,.8, .8)
+            link.set_color(0, .8, .8)
             circ = self.viewer.draw_circle(.1)
             circ.set_color(.8, .8, 0)
             circ.add_attr(jtransform)
 
-        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
 
 def wrap(x, m, M):
     """
@@ -225,6 +226,7 @@ def wrap(x, m, M):
     while x < m:
         x = x + diff
     return x
+
 
 def bound(x, m, M=None):
     """
@@ -286,9 +288,7 @@ def rk4(derivs, y0, t, *args, **kwargs):
 
     yout[0] = y0
 
-
     for i in np.arange(len(t) - 1):
-
         thist = t[i]
         dt = t[i + 1] - thist
         dt2 = dt / 2.0
