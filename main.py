@@ -91,7 +91,7 @@ def main(params):
             action = algorithm.predict(np.hstack((obs_t, obs_t)))
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
-            episode_transitions.append((obs_t, obs_t, action, reward, obs_tp1, obs_tp1, done))
+            episode_transitions.append((obs_t, (0,0,0,0), action, reward, obs_tp1, (0,0,0,0), done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
@@ -123,7 +123,7 @@ def main(params):
 
 
 if __name__ == '__main__':
-    parameters = {'buffer': PrioritizedHindsightReplayBuffer,
+    parameters = {'buffer': HindsightReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
