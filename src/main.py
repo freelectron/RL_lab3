@@ -118,6 +118,7 @@ def main(params):
         returns.append(np.sum(episode_rewards))
 
     env.close()
+    return returns, losses
 
     # ====== Evaluation ========
     # And see the results
@@ -130,7 +131,79 @@ def main(params):
     plt.show()
 
 
+def plot_results(er, per, her, pher, episode_avg=20):
+    er_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in er])
+    per_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in per])
+    her_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in her])
+    pher_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in pher])
+    x = np.arange(er_returns.shape[1])
+    y = np.mean(er_returns, axis=0)
+    color = 'blue'
+    # print(x.shape, y.shape, np.std(er_returns, axis=0).shape)
+    # plt.plot(x, y, color=color, label='Experience Replay')
+    plt.errorbar(x, y, yerr=np.std(er_returns, axis=0), capsize=5,  ecolor=color)
+
+    y = np.mean(per_returns, axis=0)
+    color = 'orange'
+    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
+    plt.errorbar(x, y, yerr=np.std(per_returns, axis=0), capsize=5,  ecolor=color, color=color)
+
+    y = np.mean(her_returns, axis=0)
+    color = 'green'
+    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
+    plt.errorbar(x, y, yerr=np.std(her_returns, axis=0), capsize=5, ecolor=color, color=color)
+
+    y = np.mean(pher_returns, axis=0)
+    color = 'red'
+    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
+    plt.errorbar(x, y, yerr=np.std(pher_returns, axis=0), capsize=5, ecolor=color, color=color)
+
+    plt.show()
+    quit()
+    er_losses = np.array([np.array(l) for (_, l) in er])
+    per_losses = np.array([np.array(l) for (_, l) in per])
+    her_losses = np.array([np.array(l) for (_, l) in her])
+    pher_losses = np.array([np.array(l) for (_, l) in pher])
+
+
 if __name__ == '__main__':
+    n = 5
+    parameters = {'buffer': ReplayBuffer,
+                  'buffer_size': 1500,
+                  'PER_alpha': 0.6,
+                  'PER_beta': 0.4,
+                  'algorithm': DQN,
+                  'batch_size': 64,
+                  'hidden_size': (64,),
+                  'optimizer': Adam,
+                  'loss_function': MSELoss,
+                  'lr': 1e-3,
+                  'gamma': 0.8,
+                  'epsilon_delta': 1e-4,
+                  'epsilon_min': 0.10,
+                  'target_network_interval': 100,
+                  'environment': 'MountainCarContinuous-v0',
+                  'episodes': 400}
+    er_results = [main(parameters) for _ in range(n)]
+
+    parameters = {'buffer': PrioritizedReplayBuffer,
+                  'buffer_size': 1500,
+                  'PER_alpha': 0.6,
+                  'PER_beta': 0.4,
+                  'algorithm': DQN,
+                  'batch_size': 64,
+                  'hidden_size': (64,),
+                  'optimizer': Adam,
+                  'loss_function': MSELoss,
+                  'lr': 1e-3,
+                  'gamma': 0.8,
+                  'epsilon_delta': 1e-4,
+                  'epsilon_min': 0.10,
+                  'target_network_interval': 100,
+                  'environment': 'MountainCarContinuous-v0',
+                  'episodes': 400}
+    per_results = [main(parameters) for _ in range(n)]
+
     parameters = {'buffer': HindsightReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -147,4 +220,25 @@ if __name__ == '__main__':
                   'target_network_interval': 100,
                   'environment': 'MountainCarContinuous-v0',
                   'episodes': 400}
-    main(parameters)
+    her_results = [main(parameters) for _ in range(n)]
+
+    parameters = {'buffer': PrioritizedHindsightReplayBuffer,
+                  'buffer_size': 1500,
+                  'PER_alpha': 0.6,
+                  'PER_beta': 0.4,
+                  'algorithm': DQN,
+                  'batch_size': 64,
+                  'hidden_size': (64,),
+                  'optimizer': Adam,
+                  'loss_function': MSELoss,
+                  'lr': 1e-3,
+                  'gamma': 0.8,
+                  'epsilon_delta': 1e-4,
+                  'epsilon_min': 0.10,
+                  'target_network_interval': 100,
+                  'environment': 'MountainCarContinuous-v0',
+                  'episodes': 400}
+    pher_results = [main(parameters) for _ in range(n)]
+    plot_results(er_results, per_results, her_results, pher_results)
+
+
