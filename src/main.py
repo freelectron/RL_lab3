@@ -129,7 +129,8 @@ def main(params):
                 train_steps += 1
                 loss = update(algorithm, buffer, params, train_steps)
                 episode_loss.append(loss)
-
+                # print()
+            # print(action)
             # termination condition
             if done:
                 episodes_length.append(t)
