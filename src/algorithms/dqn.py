@@ -80,13 +80,13 @@ class DQN(object):
         batch_range = torch.arange(0, actions.shape[0], dtype=torch.long)
         # Calculate loss
         predictions = self.q_network(obses_t)[batch_range, actions]
-        targets = rewards + self.gamma * (1 - dones) * self.target_q_network(obses_tp1).max(1)[0].detach()
+        targets = rewards + self.gamma * (1.0 - dones) * self.target_q_network(obses_tp1).max(1)[0].detach()
         loss = self.loss_function(predictions, targets)
         # Backprop
         self.optimizer.zero_grad()
         loss.backward()
         # Comment this one out if you dont want clipping
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1)
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item()
 
@@ -107,6 +107,7 @@ class DQN(object):
         loss = (losses * importance_weights).mean()
         # Backprop
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item(), torch.abs(predictions - targets).detach()
 

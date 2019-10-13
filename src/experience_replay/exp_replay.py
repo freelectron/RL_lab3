@@ -222,7 +222,7 @@ class HindsightReplayBuffer(object):
         feats_t, goals, actions, rewards, feats_tp1, dones = [], [], [], [], [], []
         for i in idxes:
             data = self._storage[i]
-            feat_t, g_t, action, reward, feat_tp1, g_tp1, done = data
+            feat_t, g_t, action, reward, feat_tp1, done = data
             feats_t.append(np.array(feat_t, copy=False))
             goals.append(np.array(g_t, copy=False))
             actions.append(np.array(action, copy=False))

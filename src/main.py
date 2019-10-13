@@ -42,17 +42,30 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
         for i, (f_t, _, a, r, f_tp1, done) in enumerate(transitions):
             if i == len(transitions) - 1:
                 r = completion_reward  # Last transition has its reward replaced
-            buffer.add(f_t, g_prime, a, r, f_tp1, g_prime, done)
+            buffer.add(f_t, g_prime, a, r, f_tp1, done)
 
 
 def main(params):
     # declare environment
+    is_goal = True
     if params['environment'] == 'agrobot_custom':
         env = CustomAcrobotEnv()
-        s, g = env.reset()
-        state_shape = s.shape[0] + g.shape[0]
+        s, goal = env.reset()
+        # action_shape = env.action_space.n
+        action_shape = 2
+    elif params['environment'] == 'windy_grid_world':
+        env = gym.make(params['environment'])
+        s, goal = env.reset()
+        action_shape = env.action_space
     else:
         env = gym.make(params['environment'])
+        s = env.reset()
+        goal = s
+        is_goal = False
+        action_shape = env.action_space
+
+    state_shape = s.shape[0] + goal.shape[0]
+
 
     # select type of experience replay using the parameters
     if params['buffer'] == ReplayBuffer:
@@ -92,7 +105,11 @@ def main(params):
 
     for i in range(params['episodes']):
         print(i, '/', params['episodes'], end='\r')
-        obs_t, g_t = env.reset()
+        if is_goal:
+            obs_t, goal = env.reset()
+        else:
+            obs_t = env.reset()
+            goal = np.zeros_like(obs_t)
 
         t = 0
         episode_loss = []
@@ -100,10 +117,10 @@ def main(params):
         episode_transitions = []
         while True:
             # env.render()
-            action = algorithm.predict(np.hstack((obs_t, g_t)))
+            action = algorithm.predict(np.hstack((obs_t, goal)))
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
-            episode_transitions.append((obs_t, g_t, action, reward, obs_tp1, done))
+            episode_transitions.append((obs_t, goal, action, reward, obs_tp1, done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
@@ -113,7 +130,7 @@ def main(params):
             # termination condition
             if done:
                 episodes_length.append(t)
-                env.render()
+                # env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
@@ -138,33 +155,47 @@ def main(params):
     plt.show()
 
 
-def plot_results(er, per, her, pher, episode_avg=20):
-    er_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in er])
-    per_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in per])
-    her_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in her])
-    pher_returns = np.array([np.mean(np.array(r).reshape((-1, 10)), axis=1) for (r, _) in pher])
-    x = np.arange(er_returns.shape[1])
+def plot_results(er, per, her, pher, episode_avg=10):
+    er_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in er])
+    er_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), er_returns), axis=1)
+    # per_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in per])
+    # per_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), per_returns), axis=1)
+    # her_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in her])
+    # her_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), her_returns), axis=1)
+    # pher_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in pher])
+    # pher_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), pher_returns), axis=1)
+
+    x = np.arange(0, er_returns.shape[0], episode_avg)
+    print(x.shape, er_returns)
     y = np.mean(er_returns, axis=0)
     color = 'blue'
-    # print(x.shape, y.shape, np.std(er_returns, axis=0).shape)
-    # plt.plot(x, y, color=color, label='Experience Replay')
-    plt.errorbar(x, y, yerr=np.std(er_returns, axis=0), capsize=5,  ecolor=color)
+    plt.plot(x, y, color=color, label='Experience Replay')
+    y_std = np.std(er_returns, axis=0)
+    plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
+    # plt.errorbar(x, y, yerr=np.std(er_returns, axis=0), capsize=5, ecolor=color, color=color, label='ER')
 
     y = np.mean(per_returns, axis=0)
     color = 'orange'
-    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
-    plt.errorbar(x, y, yerr=np.std(per_returns, axis=0), capsize=5,  ecolor=color, color=color)
+    plt.plot(x, y, color=color, label='Prioritized Experience Replay')
+    # plt.errorbar(x, y, yerr=np.std(per_returns, axis=0), capsize=5,  ecolor=color, color=color, label='PER')
+    y_std = np.std(er_returns, axis=0)
+    plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
 
     y = np.mean(her_returns, axis=0)
     color = 'green'
-    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
-    plt.errorbar(x, y, yerr=np.std(her_returns, axis=0), capsize=5, ecolor=color, color=color)
+    plt.plot(x, y, color=color, label='Hindsight Experience Replay')
+    # plt.errorbar(x, y, yerr=np.std(her_returns, axis=0), capsize=5, ecolor=color, color=color, label='HER')
+    y_std = np.std(er_returns, axis=0)
+    plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
 
     y = np.mean(pher_returns, axis=0)
     color = 'red'
-    # plt.plot(x, y, color=color, label='Prioritized Experience Replay')
-    plt.errorbar(x, y, yerr=np.std(pher_returns, axis=0), capsize=5, ecolor=color, color=color)
+    plt.plot(x, y, color=color, label='Prioritized Hindsight Experience Replay')
+    # plt.errorbar(x, y, yerr=np.std(pher_returns, axis=0), capsize=5, ecolor=color, color=color, label='PHER')
+    y_std = np.std(er_returns, axis=0)
+    plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
 
+    plt.legend()
     plt.show()
     quit()
     er_losses = np.array([np.array(l) for (_, l) in er])
@@ -174,7 +205,7 @@ def plot_results(er, per, her, pher, episode_avg=20):
 
 
 if __name__ == '__main__':
-    n = 1
+    n = 3
     parameters = {'buffer': ReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -189,10 +220,10 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'MountainCar-v0',
-                  'episodes': 400}
+                  'environment': 'CartPole-v0',
+                  'episodes': 120}
     er_results = [main(parameters) for _ in range(n)]
-
+    plot_results(er_results, None, None, None)
     parameters = {'buffer': PrioritizedReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -207,8 +238,8 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'MountainCarContinuous-v0',
-                  'episodes': 400}
+                  'environment': 'CartPole-v0',
+                  'episodes': 120}
     per_results = [main(parameters) for _ in range(n)]
 
     parameters = {'buffer': HindsightReplayBuffer,
@@ -225,8 +256,8 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'agrobot_custom',
-                  'episodes': 400}
+                  'environment': 'CartPole-v0',
+                  'episodes': 120}
     her_results = [main(parameters) for _ in range(n)]
 
     parameters = {'buffer': PrioritizedHindsightReplayBuffer,
@@ -243,8 +274,8 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'MountainCarContinuous-v0',
-                  'episodes': 400}
+                  'environment': 'CartPole-v0',
+                  'episodes': 120}
     pher_results = [main(parameters) for _ in range(n)]
     plot_results(er_results, per_results, her_results, pher_results)
 
