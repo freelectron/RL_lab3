@@ -281,9 +281,11 @@ if __name__ == '__main__':
                   'gamma': 0.8,
                   'epsilon_delta': 1e-2,
                   'epsilon_min': 0.10,
-                  'target_network_interval': 100,
+                  'target_network_interval': 50,
                   'environment': 'acrobot_simple',
-                  'episodes': 120}
+                  'train_steps': 5000,
+                  'test_every': 500,
+                  'seed': 42}
 
     er_results = [main(parameters) for _ in range(n)]
 
