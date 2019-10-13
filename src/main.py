@@ -32,14 +32,14 @@ def update(algorithm, buffer, params, train_steps):
 
 def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
     if type(buffer) == ReplayBuffer or type(buffer) == PrioritizedReplayBuffer:
-        for (f_t, g_t, a, r, f_tp1, g_tp1, done) in transitions:
-            obs_t = np.hstack((f_t, g_t))
-            obs_tp1 = np.hstack((f_tp1, g_tp1))
+        for (f_t, g, a, r, f_tp1, done) in transitions:
+            obs_t = np.hstack((f_t, g))
+            obs_tp1 = np.hstack((f_tp1, g))
             buffer.add(obs_t, a, r, obs_tp1, done)
     if type(buffer) == HindsightReplayBuffer or type(buffer) == PrioritizedHindsightReplayBuffer:
-        g_prime = transitions[-1][5]
+        g_prime = transitions[-1][4]
         # Replace goal of every transition
-        for i, (f_t, _, a, r, f_tp1, _, done) in enumerate(transitions):
+        for i, (f_t, _, a, r, f_tp1, done) in enumerate(transitions):
             if i == len(transitions) - 1:
                 r = completion_reward  # Last transition has its reward replaced
             buffer.add(f_t, g_prime, a, r, f_tp1, g_prime, done)
@@ -49,6 +49,8 @@ def main(params):
     # declare environment
     if params['environment'] == 'agrobot_custom':
         env = CustomAcrobotEnv()
+        s, g = env.reset()
+        state_shape = s.shape[0] + g.shape[0]
     else:
         env = gym.make(params['environment'])
 
@@ -68,11 +70,9 @@ def main(params):
     else:
         raise ValueError('Buffer type not found.')
 
-    s, g = env.reset()
-
     # select learning algorithm using the parameters
     if params['algorithm'] == DQN:
-        algorithm = DQN(s.shape[0] + g.shape[0],
+        algorithm = DQN(state_shape,
                         env.action_space.n,
                         loss_function=loss_function,
                         optimizer=params['optimizer'],
@@ -103,7 +103,7 @@ def main(params):
             action = algorithm.predict(np.hstack((obs_t, g_t)))
             t += 1
             obs_tp1, reward, done, _ = env.step(action)
-            episode_transitions.append((obs_t, g_t, action, reward, obs_tp1, g_t, done))
+            episode_transitions.append((obs_t, g_t, action, reward, obs_tp1, done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
@@ -174,7 +174,7 @@ def plot_results(er, per, her, pher, episode_avg=20):
 
 
 if __name__ == '__main__':
-    n = 5
+    n = 1
     parameters = {'buffer': ReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -189,7 +189,7 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'MountainCarContinuous-v0',
+                  'environment': 'MountainCar-v0',
                   'episodes': 400}
     er_results = [main(parameters) for _ in range(n)]
 

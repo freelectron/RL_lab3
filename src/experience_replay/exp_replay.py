@@ -209,8 +209,8 @@ class HindsightReplayBuffer(object):
     def __len__(self):
         return len(self._storage)
 
-    def add(self, feat_t, g_t, action, reward, feat_tp1, g_tp1, done):
-        data = (feat_t, g_t, action, reward, feat_tp1, g_tp1, done)
+    def add(self, feat_t, goal, action, reward, feat_tp1, done):
+        data = (feat_t, goal, action, reward, feat_tp1, done)
 
         if self._next_idx >= len(self._storage):
             self._storage.append(data)
@@ -219,20 +219,19 @@ class HindsightReplayBuffer(object):
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     def _encode_sample(self, idxes):
-        feats_t, gs_t, actions, rewards, feats_tp1, gs_tp1, dones = [], [], [], [], [], [], []
+        feats_t, goals, actions, rewards, feats_tp1, dones = [], [], [], [], [], []
         for i in idxes:
             data = self._storage[i]
             feat_t, g_t, action, reward, feat_tp1, g_tp1, done = data
             feats_t.append(np.array(feat_t, copy=False))
-            gs_t.append(np.array(g_t, copy=False))
+            goals.append(np.array(g_t, copy=False))
             actions.append(np.array(action, copy=False))
             rewards.append(reward)
             feats_tp1.append(np.array(feat_tp1, copy=False))
-            gs_tp1.append(np.array(g_tp1, copy=False))
             dones.append(done)
 
-        return np.concatenate((np.array(feats_t), np.array(gs_t)), axis=1), np.array(actions), np.array(rewards), \
-               np.concatenate((np.array(feats_tp1), np.array(gs_tp1)), axis=1), np.array(dones)
+        return np.concatenate((np.array(feats_t), np.array(goals)), axis=1), np.array(actions), np.array(rewards), \
+               np.concatenate((np.array(feats_tp1), np.array(goals)), axis=1), np.array(dones)
 
     def sample(self, batch_size):
         """Sample a batch of experiences.
