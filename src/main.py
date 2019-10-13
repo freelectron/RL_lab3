@@ -134,7 +134,8 @@ def main(params):
             if done:
                 episodes_length.append(t)
                 print('Episode finished in', t, 'steps')
-                print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
+                loss_print = np.mean(episode_loss) if episode_loss else 'NaN'
+                print('Cum. reward:', np.sum(episode_rewards), 'Loss:', loss_print, 'Epsilon:', algorithm.epsilon)
                 break
 
             obs_t = obs_tp1
@@ -159,16 +160,15 @@ def main(params):
 
 def plot_results(er, per, her, pher, episode_avg=10):
     er_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in er])
-    er_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), er_returns), axis=1)
-    # per_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in per])
+    # er_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), er_returns), axis=1)
+    per_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in per])
     # per_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), per_returns), axis=1)
-    # her_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in her])
+    her_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in her])
     # her_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), her_returns), axis=1)
-    # pher_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in pher])
+    pher_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _) in pher])
     # pher_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), pher_returns), axis=1)
 
-    x = np.arange(0, er_returns.shape[0], episode_avg)
-    print(x.shape, er_returns)
+    x = np.arange(0, er_returns.shape[1]*episode_avg, episode_avg)
     y = np.mean(er_returns, axis=0)
     color = 'blue'
     plt.plot(x, y, color=color, label='Experience Replay')
@@ -225,6 +225,7 @@ if __name__ == '__main__':
                   'environment': 'CartPole-v0',
                   'episodes': 120}
     er_results = [main(parameters) for _ in range(n)]
+    # plot_results(er_results, None, None, None)
 
     parameters = {'buffer': PrioritizedReplayBuffer,
                   'buffer_size': 1500,
