@@ -154,10 +154,10 @@ def main(params):
     episodes_length = []
     episodes_length_test = []
 
-    print('Starting to train:', type(algorithm), type(buffer))
+    print('Starting to train:', type(buffer))
+    print(train_steps)
     test_lengths = test(algorithm, env)
     episodes_length_test.append(test_lengths)
-    print(train_steps)
 
     while train_steps < params['train_steps']:
         if isinstance(env, GridworldEnv):
@@ -193,6 +193,7 @@ def main(params):
                 if train_steps % params['test_every'] == 0:
                     print(train_steps)
                     test_lengths = test(algorithm, env)
+                    print('Epsilon:', algorithm.epsilon)
                     episodes_length_test.append(test_lengths)
             # termination condition
             if done:
@@ -275,14 +276,14 @@ if __name__ == '__main__':
                   'algorithm': DQN,
                   'batch_size': 64,
                   'hidden_size': (64,),
-                  'optimizer': SGD,
+                  'optimizer': Adam,
                   'loss_function': MSELoss,
                   'lr': 1e-3,
-                  'gamma': 0.8,
-                  'epsilon_delta': 1e-2,
+                  'gamma': 0.99,
+                  'epsilon_delta': 5e-4,
                   'epsilon_min': 0.10,
-                  'target_network_interval': 50,
-                  'environment': 'acrobot_simple',
+                  'target_network_interval': 100,
+                  'environment': 'windy_grid_world',
                   'train_steps': 5000,
                   'test_every': 500,
                   'seed': 42}
