@@ -14,7 +14,7 @@ __author__ = "Christoph Dann <cdann@cdann.de>"
 # SOURCE:
 # https://github.com/rlpy/rlpy/blob/master/rlpy/Domains/Acrobot.py
 
-class AcrobotEnv(core.Env):
+class CustomAcrobotEnv(core.Env):
     """
     Acrobot is a 2-link pendulum with only the second joint actuated
     Intitially, both links point downwards. The goal is to swing the
@@ -82,6 +82,9 @@ class AcrobotEnv(core.Env):
     domain_fig = None
     actions_num = 3
 
+    # CUSTOM: goal threshold for each angle comparison, in radians and in range (0, pi]
+    goal_threshold = pi / 4
+
     def __init__(self):
         self.viewer = None
         high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
@@ -89,6 +92,7 @@ class AcrobotEnv(core.Env):
         self.observation_space = spaces.Box(low=low, high=high)
         self.action_space = spaces.Discrete(3)
         self.state = None
+        self.goal = None
         self.seed()
 
     def seed(self, seed=None):
@@ -97,7 +101,17 @@ class AcrobotEnv(core.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
-        return self._get_ob()
+        self.goal = self._set_rnd_goal()
+        return self._get_ob(), self.goal
+
+    # CUSTOM
+    def _set_rnd_goal(self):
+        """
+        Produce goal as random joint angles.
+        """
+        self.theta1_goal, self.theta2_goal = self.np_random.uniform(low=0, high=2 * pi, size=(2,))
+        return np.array([np.cos(self.theta1_goal), np.sin(self.theta1_goal),
+                         np.cos(self.theta2_goal), np.sin(self.theta2_goal)])
 
     def step(self, a):
         s = self.state
@@ -135,7 +149,11 @@ class AcrobotEnv(core.Env):
 
     def _terminal(self):
         s = self.state
-        return bool(-np.cos(s[0]) - np.cos(s[1] + s[0]) > 1.)
+        g = self.goal
+        t = self.goal_threshold
+        if is_rad_close(s[0], g[0], g[1], t) and is_rad_close(s[1], g[2], g[3], t):
+            return True
+        return False
 
     def _dsdt(self, s_augmented, t):
         m1 = self.LINK_MASS_1
@@ -145,7 +163,11 @@ class AcrobotEnv(core.Env):
         lc2 = self.LINK_COM_POS_2
         I1 = self.LINK_MOI
         I2 = self.LINK_MOI
+
+        # CUSTOM: changed gravity to 0
         g = 9.8
+        # g = 0
+
         a = s_augmented[-1]
         s = s_augmented[:-1]
         theta1 = s[0]
@@ -183,6 +205,7 @@ class AcrobotEnv(core.Env):
 
         if s is None: return None
 
+        # state coordinates
         p1 = [-self.LINK_LENGTH_1 *
               np.cos(s[0]), self.LINK_LENGTH_1 * np.sin(s[0])]
 
@@ -192,7 +215,27 @@ class AcrobotEnv(core.Env):
         xys = np.array([[0, 0], p1, p2])[:, ::-1]
         thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
 
-        self.viewer.draw_line((-2.2, 1), (2.2, 1))
+        # CUSTOM: get goal coordinates and show them
+        g = self.goal
+        p1_goal = [-self.LINK_LENGTH_1 * g[0], self.LINK_LENGTH_1 * g[1]]
+
+        p2_goal = [p1_goal[0] - self.LINK_LENGTH_2 * np.cos(self.theta1_goal + self.theta2_goal),
+                   p1_goal[1] + self.LINK_LENGTH_2 * np.sin(self.theta1_goal + self.theta2_goal)]
+
+        # CUSTOM: big cross is the goal position for the first joint
+        joint1_size = 0.1
+        self.viewer.draw_line(start=(p1_goal[0] + joint1_size, p1_goal[1] + joint1_size),
+                              end=(p1_goal[0] - joint1_size, p1_goal[1] - joint1_size))
+        self.viewer.draw_line(start=(p1_goal[0] - joint1_size, p1_goal[1] + joint1_size),
+                              end=(p1_goal[0] + joint1_size, p1_goal[1] - joint1_size))
+
+        # CUSTOM: small cross is the goal position for the second joint
+        joint2_size = 0.05
+        self.viewer.draw_line(start=(p2_goal[0] + joint2_size, p2_goal[1] + joint2_size),
+                              end=(p2_goal[0] - joint2_size, p2_goal[1] - joint2_size))
+        self.viewer.draw_line(start=(p2_goal[0] - joint2_size, p2_goal[1] + joint2_size),
+                              end=(p2_goal[0] + joint2_size, p2_goal[1] - joint2_size))
+
         for ((x, y), th) in zip(xys, thetas):
             l, r, t, b = 0, 1, .1, -.1
             jtransform = rendering.Transform(rotation=th, translation=(x, y))
@@ -209,6 +252,18 @@ class AcrobotEnv(core.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
+
+# CUSTOM
+def is_rad_close(a, cos_b, sin_b, threshold):
+    """
+    Given two radians (cosine or sine of angles) check if they are close enough given a threshold
+    """
+    b = np.arctan2(sin_b, cos_b)
+    diff = pi - abs(abs(a - b) - pi)
+    if diff < threshold:
+        return True
+    return False
 
 
 def wrap(x, m, M):
