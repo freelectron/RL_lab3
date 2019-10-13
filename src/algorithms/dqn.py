@@ -14,7 +14,7 @@ class QNetwork(nn.Module):
         layer_n = (num_input, *num_hidden, num_output)
         for i in range(len(layer_n[:-1])):
             layers.append(nn.Linear(layer_n[i], layer_n[i+1]))
-            if i < len(layer_n) - 1:
+            if i < len(layer_n) - 2:
                 layers.append(nn.ReLU())
         self.network = nn.Sequential(*layers)
         self.d_type = self.network.state_dict()['0.weight'].type()
@@ -86,7 +86,7 @@ class DQN(object):
         self.optimizer.zero_grad()
         loss.backward()
         # Comment this one out if you dont want clipping
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        # torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item()
 
@@ -107,7 +107,7 @@ class DQN(object):
         loss = (losses * importance_weights).mean()
         # Backprop
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        # torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item(), torch.abs(predictions - targets).detach()
 

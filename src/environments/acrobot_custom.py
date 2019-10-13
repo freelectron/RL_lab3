@@ -100,12 +100,13 @@ class CustomAcrobotEnv(core.Env):
         self.goal = None
         self.time = None
         self.seed()
+        self.goal = self._set_rnd_goal()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def perform_reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
         self.goal = self.np_random.uniform(low=0, high=2 * pi, size=(2,))
         self.time = 0
@@ -119,7 +120,7 @@ class CustomAcrobotEnv(core.Env):
         g = self.goal
         return np.array([np.cos(g[0]), np.sin(g[0]), np.cos(g[1]), np.sin(g[1])])
 
-    def step(self, a):
+    def perform_step(self, a):
         s = self.state
         torque = self.AVAIL_TORQUE[a]
 
