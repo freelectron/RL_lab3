@@ -7,6 +7,7 @@ from algorithms.dqn_other import algo_DQN
 import gym
 import matplotlib.pyplot as plt
 from environments.acrobot_custom import CustomAcrobotEnv
+from environments.acrobot_simple import SimpleAcrobotEnv
 
 
 def update(algorithm, buffer, params, train_steps):
@@ -48,7 +49,9 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
 def main(params):
     # declare environment
     if params['environment'] == 'agrobot_custom':
-        env = CustomAcrobotEnv()
+        env = CustomAcrobotEnv(stochastic=False, max_steps=200)
+    elif params['environment'] == 'agrobot_simple':
+        env = SimpleAcrobotEnv(stochastic=False, max_steps=200)
     else:
         env = gym.make(params['environment'])
 
@@ -99,10 +102,10 @@ def main(params):
         episode_rewards = []
         episode_transitions = []
         while True:
-            # env.render()
+            env.render()
             action = algorithm.predict(np.hstack((obs_t, g_t)))
             t += 1
-            obs_tp1, reward, done, _ = env.step(action)
+            obs_tp1, reward, done, _, _ = env.step(action)
             episode_transitions.append((obs_t, g_t, action, reward, obs_tp1, g_t, done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
@@ -113,7 +116,6 @@ def main(params):
             # termination condition
             if done:
                 episodes_length.append(t)
-                env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
@@ -138,7 +140,7 @@ def main(params):
 
 
 if __name__ == '__main__':
-    parameters = {'buffer': HindsightReplayBuffer,
+    parameters = {'buffer': PrioritizedReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
@@ -152,6 +154,6 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'agrobot_custom',
-                  'episodes': 400}
+                  'environment': 'agrobot_simple',
+                  'episodes': 600}
     main(parameters)

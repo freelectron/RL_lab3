@@ -10,11 +10,11 @@ __credits__ = ["Alborz Geramifard", "Robert H. Klein", "Christoph Dann",
 __license__ = "BSD 3-Clause"
 __author__ = "Christoph Dann <cdann@cdann.de>"
 
-
 # SOURCE:
 # https://github.com/rlpy/rlpy/blob/master/rlpy/Domains/Acrobot.py
 
-class CustomAcrobotEnv(core.Env):
+class SimpleAcrobotEnv(core.Env):
+
     """
     Acrobot is a 2-link pendulum with only the second joint actuated
     Intitially, both links point downwards. The goal is to swing the
@@ -56,7 +56,7 @@ class CustomAcrobotEnv(core.Env):
 
     metadata = {
         'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 15
+        'video.frames_per_second' : 15
     }
 
     dt = .2
@@ -82,9 +82,6 @@ class CustomAcrobotEnv(core.Env):
     domain_fig = None
     actions_num = 3
 
-    # CUSTOM: goal threshold for each angle comparison, in radians and in range (0, pi]
-    goal_threshold = pi / 4
-
     # CUSTOM: threshold for the angle ranges which get stochastic rewards, used in _get_reward()
     stochastic_threshold = 0.25
 
@@ -107,17 +104,9 @@ class CustomAcrobotEnv(core.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
-        self.goal = self.np_random.uniform(low=0, high=2 * pi, size=(2,))
+        self.goal = np.array([1.])
         self.time = 0
-        return self._get_ob(), self._get_goal_ob()
-
-    # CUSTOM
-    def _get_goal_ob(self):
-        """
-        Produce goal as random joint angles.
-        """
-        g = self.goal
-        return np.array([np.cos(g[0]), np.sin(g[0]), np.cos(g[1]), np.sin(g[1])])
+        return self._get_ob(), self.goal
 
     def step(self, a):
         s = self.state
@@ -155,7 +144,12 @@ class CustomAcrobotEnv(core.Env):
         if self.time >= self.max_steps:
             terminal = True
 
-        return (self._get_ob(), reward, terminal, {})
+        return (self._get_ob(), reward, terminal, {}, self._get_goal())
+
+    # CUSTOM
+    def _get_goal(self):
+        s = self.state
+        return -np.cos(s[0]) - np.cos(s[1] + s[0])
 
     # CUSTOM
     def _get_reward(self, terminal):
@@ -169,16 +163,12 @@ class CustomAcrobotEnv(core.Env):
 
     def _get_ob(self):
         s = self.state
-        return np.array([np.cos(s[0]), np.sin(s[0]), np.cos(s[1]), np.sin(s[1]), s[2], s[3]])
+        return np.array([cos(s[0]), np.sin(s[0]), cos(s[1]), sin(s[1]), s[2], s[3]])
 
-    # CUSTOM
     def _terminal(self):
         s = self.state
         g = self.goal
-        t = self.goal_threshold
-        if is_rad_close(s[0], g[0], t) and is_rad_close(s[1], g[1], t):
-            return True
-        return False
+        return bool(-np.cos(s[0]) - np.cos(s[1] + s[0]) > g[0])
 
     def _dsdt(self, s_augmented, t):
         m1 = self.LINK_MASS_1
@@ -188,11 +178,7 @@ class CustomAcrobotEnv(core.Env):
         lc2 = self.LINK_COM_POS_2
         I1 = self.LINK_MOI
         I2 = self.LINK_MOI
-
-        # CUSTOM: changed gravity to 0
         g = 9.8
-        # g = 0
-
         a = s_augmented[-1]
         s = s_augmented[:-1]
         theta1 = s[0]
@@ -200,22 +186,22 @@ class CustomAcrobotEnv(core.Env):
         dtheta1 = s[2]
         dtheta2 = s[3]
         d1 = m1 * lc1 ** 2 + m2 * \
-             (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
+            (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
         d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
         phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.)
         phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2) \
-               + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
+               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2)  \
+            + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
         if self.book_or_nips == "nips":
             # the following line is consistent with the description in the
             # paper
             ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                       (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         else:
             # the following line is consistent with the java implementation and the
             # book
             ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) \
-                       / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 
@@ -225,74 +211,37 @@ class CustomAcrobotEnv(core.Env):
         s = self.state
 
         if self.viewer is None:
-            self.viewer = rendering.Viewer(500, 500)
-            self.viewer.set_bounds(-2.2, 2.2, -2.2, 2.2)
+            self.viewer = rendering.Viewer(500,500)
+            self.viewer.set_bounds(-2.2,2.2,-2.2,2.2)
 
         if s is None: return None
 
-        # state coordinates
         p1 = [-self.LINK_LENGTH_1 *
               np.cos(s[0]), self.LINK_LENGTH_1 * np.sin(s[0])]
 
         p2 = [p1[0] - self.LINK_LENGTH_2 * np.cos(s[0] + s[1]),
               p1[1] + self.LINK_LENGTH_2 * np.sin(s[0] + s[1])]
 
-        xys = np.array([[0, 0], p1, p2])[:, ::-1]
-        thetas = [s[0] - np.pi / 2, s[0] + s[1] - np.pi / 2]
+        xys = np.array([[0,0], p1, p2])[:,::-1]
+        thetas = [s[0]-np.pi/2, s[0]+s[1]-np.pi/2]
 
-        # ----------- DRAWING CROSSES -----------
-        # CUSTOM: get goal coordinates and show them
-        g = self.goal
-        go = [g[0] - np.pi / 2, g[0] + g[1] - np.pi / 2]
-        p1_goal = [-self.LINK_LENGTH_1 *
-                   np.cos(g[0]), self.LINK_LENGTH_1 * np.sin(g[0])]
-
-        p2_goal = [p1_goal[0] - self.LINK_LENGTH_2 * np.cos(g[0] + g[1]),
-                   p1_goal[1] + self.LINK_LENGTH_2 * np.sin(g[0] + g[1])]
-
-        # CUSTOM: big cross is the goal position for the first joint
-        joint1_size = 0.1
-        self.viewer.draw_line(start=(p1_goal[0] + joint1_size, p1_goal[1] + joint1_size),
-                              end=(p1_goal[0] - joint1_size, p1_goal[1] - joint1_size))
-        self.viewer.draw_line(start=(p1_goal[0] - joint1_size, p1_goal[1] + joint1_size),
-                              end=(p1_goal[0] + joint1_size, p1_goal[1] - joint1_size))
-
-        # CUSTOM: small cross is the goal position for the second joint
-        joint2_size = 0.05
-        self.viewer.draw_line(start=(p2_goal[0] + joint2_size, p2_goal[1] + joint2_size),
-                              end=(p2_goal[0] - joint2_size, p2_goal[1] - joint2_size))
-        self.viewer.draw_line(start=(p2_goal[0] - joint2_size, p2_goal[1] + joint2_size),
-                              end=(p2_goal[0] + joint2_size, p2_goal[1] - joint2_size))
-        # ----------- DRAWING CROSSES -----------
-
-        for ((x, y), th) in zip(xys, thetas):
-            l, r, t, b = 0, 1, .1, -.1
-            jtransform = rendering.Transform(rotation=th, translation=(x, y))
-            link = self.viewer.draw_polygon([(l, b), (l, t), (r, t), (r, b)])
+        self.viewer.draw_line((-2.2, 1), (2.2, 1))
+        for ((x,y),th) in zip(xys, thetas):
+            l,r,t,b = 0, 1, .1, -.1
+            jtransform = rendering.Transform(rotation=th, translation=(x,y))
+            link = self.viewer.draw_polygon([(l,b), (l,t), (r,t), (r,b)])
             link.add_attr(jtransform)
-            link.set_color(0, .8, .8)
+            link.set_color(0,.8, .8)
             circ = self.viewer.draw_circle(.1)
             circ.set_color(.8, .8, 0)
             circ.add_attr(jtransform)
 
-        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
+        return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
     def close(self):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
-
-
-# CUSTOM
-def is_rad_close(s, g, threshold):
-    """
-    Given two radians (cosine or sine of angles) check if they are close enough given a threshold
-    """
-    diff = pi - abs(abs(s - g) - pi)
-    if diff < threshold:
-        return True
-    return False
-
 
 def wrap(x, m, M):
     """
@@ -309,7 +258,6 @@ def wrap(x, m, M):
     while x < m:
         x = x + diff
     return x
-
 
 def bound(x, m, M=None):
     """
@@ -371,7 +319,9 @@ def rk4(derivs, y0, t, *args, **kwargs):
 
     yout[0] = y0
 
+
     for i in np.arange(len(t) - 1):
+
         thist = t[i]
         dt = t[i + 1] - thist
         dt2 = dt / 2.0
