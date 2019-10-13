@@ -104,7 +104,7 @@ class SimpleAcrobotEnv(core.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
-        self.goal = np.array([1.])
+        self.goal = np.array([-1.5])
         self.time = 0
         return self._get_ob(), self.goal
 
@@ -149,7 +149,7 @@ class SimpleAcrobotEnv(core.Env):
     # CUSTOM
     def _get_goal(self):
         s = self.state
-        return -np.cos(s[0]) - np.cos(s[1] + s[0])
+        return np.array([-np.cos(s[0]) - np.cos(s[1] + s[0])])
 
     # CUSTOM
     def _get_reward(self, terminal):
@@ -225,7 +225,8 @@ class SimpleAcrobotEnv(core.Env):
         xys = np.array([[0,0], p1, p2])[:,::-1]
         thetas = [s[0]-np.pi/2, s[0]+s[1]-np.pi/2]
 
-        self.viewer.draw_line((-2.2, 1), (2.2, 1))
+        g = self.goal
+        self.viewer.draw_line((-2.2, g[0]), (2.2, g[0]))
         for ((x,y),th) in zip(xys, thetas):
             l,r,t,b = 0, 1, .1, -.1
             jtransform = rendering.Transform(rotation=th, translation=(x,y))
