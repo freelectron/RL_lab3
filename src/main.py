@@ -173,7 +173,7 @@ def main(params):
         episode_rewards = []
         episode_transitions = []
         while train_steps < params['train_steps']:
-            # env.render()
+            env.render()
             action = algorithm.predict(np.hstack((obs_t, goal)))
             t += 1
             if isinstance(env, GridworldEnv):
