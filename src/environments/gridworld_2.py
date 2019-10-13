@@ -29,7 +29,6 @@ class GridworldEnv(discrete.DiscreteEnv):
 
     metadata = {'render.modes': ['human', 'ansi']}
 
-
     def make_coordinates(self, s):
         return np.array([s // self.shape[0], s % self.shape[1]])
 

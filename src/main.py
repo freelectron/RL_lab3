@@ -146,10 +146,10 @@ def main(params):
     episodes_length = []
     episodes_length_test = []
 
-    print('Starting to train:', type(algorithm), type(buffer))
+    print('Starting to train:', type(buffer))
+    print(train_steps)
     test_lengths = test(algorithm, env)
     episodes_length_test.append(test_lengths)
-    print(train_steps)
 
     while train_steps < params['train_steps']:
         if isinstance(env, GridworldEnv):
@@ -271,10 +271,10 @@ if __name__ == '__main__':
                   'gamma': 0.8,
                   'epsilon_delta': 1e-2,
                   'epsilon_min': 0.10,
-                  'target_network_interval': 100,
+                  'target_network_interval': 50,
                   'environment': 'windy_grid_world',
-                  'train_steps': 10000,
-                  'test_every': 1000,
+                  'train_steps': 5000,
+                  'test_every': 500,
                   'seed': 42}
     er_results = [main(parameters) for _ in range(n)]
 
