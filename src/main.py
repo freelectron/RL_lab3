@@ -31,16 +31,25 @@ def update(algorithm, buffer, params, train_steps):
     return loss
 
 
-def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
+def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0, special_goal=False):
     if type(buffer) == ReplayBuffer or type(buffer) == PrioritizedReplayBuffer:
-        for (f_t, g, a, r, f_tp1, done) in transitions:
-            obs_t = np.hstack((f_t, g))
-            obs_tp1 = np.hstack((f_tp1, g))
-            buffer.add(obs_t, a, r, obs_tp1, done)
+        if special_goal:
+            for (f_t, g, a, r, f_tp1, _, done) in transitions:
+                obs_t = np.hstack((f_t, g))
+                obs_tp1 = np.hstack((f_tp1, g))
+                buffer.add(obs_t, a, r, obs_tp1, done)
+        else:
+            for (f_t, g, a, r, f_tp1, done) in transitions:
+                obs_t = np.hstack((f_t, g))
+                obs_tp1 = np.hstack((f_tp1, g))
+                buffer.add(obs_t, a, r, obs_tp1, done)
     if type(buffer) == HindsightReplayBuffer or type(buffer) == PrioritizedHindsightReplayBuffer:
-        g_prime = transitions[-1][4]
+        if special_goal:
+            g_prime = transitions[-1][5]
+        else:
+            g_prime = transitions[-1][4]
         # Replace goal of every transition
-        for i, (f_t, _, a, r, f_tp1, done) in enumerate(transitions):
+        for i, (f_t, _, a, r, f_tp1, _, done) in enumerate(transitions):
             if i == len(transitions) - 1:
                 r = completion_reward  # Last transition has its reward replaced
             buffer.add(f_t, g_prime, a, r, f_tp1, done)
@@ -49,10 +58,10 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0):
 def main(params):
     # declare environment
     is_goal = True
-    if params['environment'] == 'agrobot_custom':
+    if params['environment'] == 'acrobot_custom':
         env = CustomAcrobotEnv(stochastic=False, max_steps=200)
         s, goal = env.reset()
-    elif params['environment'] == 'agrobot_simple':
+    elif params['environment'] == 'acrobot_simple':
         env = SimpleAcrobotEnv(stochastic=False, max_steps=200)
         s, goal = env.reset()
     elif params['environment'] == 'windy_grid_world':
@@ -120,10 +129,12 @@ def main(params):
             action = algorithm.predict(np.hstack((obs_t, goal)))
             t += 1
             if is_goal:
-                obs_tp1, reward, done, _, goal = env.step(action)
+                obs_tp1, reward, done, _, gr = env.step(action)
+                transition = (obs_t, goal, action, reward, obs_tp1, gr, done)
             else:
                 obs_tp1, reward, done, _ = env.step(action)
-            episode_transitions.append((obs_t, goal, action, reward, obs_tp1, done))
+                transition = (obs_t, goal, action, reward, obs_tp1, done)
+            episode_transitions.append(transition)
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
                 train_steps += 1
@@ -140,7 +151,7 @@ def main(params):
 
             obs_t = obs_tp1
 
-        add_transitions_to_buffer(episode_transitions, buffer)
+        add_transitions_to_buffer(episode_transitions, buffer, completion_reward=0.0, special_goal=is_goal)
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
 
@@ -207,7 +218,8 @@ def plot_results(er, per, her, pher, episode_avg=10):
 
 
 if __name__ == '__main__':
-    n = 3
+    n = 1
+    environment = 'acrobot_simple'
     parameters = {'buffer': ReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -222,7 +234,7 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'CartPole-v0',
+                  'environment': environment,
                   'episodes': 120}
     er_results = [main(parameters) for _ in range(n)]
     # plot_results(er_results, None, None, None)
@@ -241,7 +253,7 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'CartPole-v0',
+                  'environment': environment,
                   'episodes': 120}
     per_results = [main(parameters) for _ in range(n)]
 
@@ -259,7 +271,7 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'CartPole-v0',
+                  'environment': environment,
                   'episodes': 120}
     her_results = [main(parameters) for _ in range(n)]
 
@@ -277,7 +289,7 @@ if __name__ == '__main__':
                   'epsilon_delta': 1e-4,
                   'epsilon_min': 0.10,
                   'target_network_interval': 100,
-                  'environment': 'CartPole-v0',
+                  'environment': environment,
                   'episodes': 120}
     pher_results = [main(parameters) for _ in range(n)]
     plot_results(er_results, per_results, her_results, pher_results)
