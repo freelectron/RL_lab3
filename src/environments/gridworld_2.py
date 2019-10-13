@@ -33,12 +33,13 @@ class GridworldEnv(discrete.DiscreteEnv):
     def make_coordinates(self, s):
         return np.array([s // self.shape[0], s % self.shape[1]])
 
-    def __init__(self, shape=[7,7]):
+    def __init__(self, shape=[7, 7], t_max=100):
         if not isinstance(shape, (list, tuple)) or not len(shape) == 2:
             raise ValueError('shape argument must be a list/tuple of length 2')
 
         self.shape = shape
-
+        self.t = None
+        self.t_max = t_max
         nS = np.prod(shape)
         nA = 4
 
@@ -90,11 +91,15 @@ class GridworldEnv(discrete.DiscreteEnv):
         super(GridworldEnv, self).__init__(nS, nA, P, isd)
 
     def perform_reset(self):
+        self.t = 0
         self.s = self.reset()
         return self.make_coordinates(self.s), self.goal_state_coordinates
 
     def perform_step(self, a):
         obs_tp1, reward, done, _ = self.step(a)
+        self.t += 1
+        if self.t == self.t_max:
+            done = True
         return self.make_coordinates(obs_tp1), reward, done, _
 
     def render(self, mode='human', close=False):
