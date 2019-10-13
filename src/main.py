@@ -7,6 +7,7 @@ from algorithms.dqn_other import algo_DQN
 import gym
 import matplotlib.pyplot as plt
 from environments.acrobot_custom import CustomAcrobotEnv
+from environments.acrobot_simple import SimpleAcrobotEnv
 
 
 def update(algorithm, buffer, params, train_steps):
@@ -49,20 +50,19 @@ def main(params):
     # declare environment
     is_goal = True
     if params['environment'] == 'agrobot_custom':
-        env = CustomAcrobotEnv()
+        env = CustomAcrobotEnv(stochastic=False, max_steps=200)
         s, goal = env.reset()
-        # action_shape = env.action_space.n
-        action_shape = 2
+    elif params['environment'] == 'agrobot_simple':
+        env = SimpleAcrobotEnv(stochastic=False, max_steps=200)
+        s, goal = env.reset()
     elif params['environment'] == 'windy_grid_world':
         env = gym.make(params['environment'])
         s, goal = env.reset()
-        action_shape = env.action_space
     else:
         env = gym.make(params['environment'])
         s = env.reset()
         goal = s
         is_goal = False
-        action_shape = env.action_space
 
     state_shape = s.shape[0] + goal.shape[0]
 
@@ -119,7 +119,10 @@ def main(params):
             # env.render()
             action = algorithm.predict(np.hstack((obs_t, goal)))
             t += 1
-            obs_tp1, reward, done, _ = env.step(action)
+            if is_goal:
+                obs_tp1, reward, done, _, goal = env.step(action)
+            else:
+                obs_tp1, reward, done, _ = env.step(action)
             episode_transitions.append((obs_t, goal, action, reward, obs_tp1, done))
             episode_rewards.append(reward)
             if len(buffer) >= params['batch_size']:
@@ -130,7 +133,6 @@ def main(params):
             # termination condition
             if done:
                 episodes_length.append(t)
-                # env.render()
                 print('Episode finished in', t, 'steps')
                 print('Cum. reward:', np.sum(episode_rewards), 'Loss:', np.mean(episode_loss), 'Epsilon:', algorithm.epsilon)
                 break
@@ -223,7 +225,7 @@ if __name__ == '__main__':
                   'environment': 'CartPole-v0',
                   'episodes': 120}
     er_results = [main(parameters) for _ in range(n)]
-    plot_results(er_results, None, None, None)
+
     parameters = {'buffer': PrioritizedReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -278,5 +280,3 @@ if __name__ == '__main__':
                   'episodes': 120}
     pher_results = [main(parameters) for _ in range(n)]
     plot_results(er_results, per_results, her_results, pher_results)
-
-
