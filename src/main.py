@@ -48,13 +48,19 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0, specia
     if type(buffer) == HindsightReplayBuffer or type(buffer) == PrioritizedHindsightReplayBuffer:
         if special_goal:
             g_prime = transitions[-1][5]
+            # Replace goal of every transition
+            for i, (f_t, _, a, r, f_tp1, _, done) in enumerate(transitions):
+                if i == len(transitions) - 1:
+                    r = completion_reward  # Last transition has its reward replaced
+                buffer.add(f_t, g_prime, a, r, f_tp1, done)
         else:
             g_prime = transitions[-1][4]
-        # Replace goal of every transition
-        for i, (f_t, _, a, r, f_tp1, _, done) in enumerate(transitions):
-            if i == len(transitions) - 1:
-                r = completion_reward  # Last transition has its reward replaced
-            buffer.add(f_t, g_prime, a, r, f_tp1, done)
+            # Replace goal of every transition
+            for i, (f_t, _, a, r, f_tp1, done) in enumerate(transitions):
+                if i == len(transitions) - 1:
+                    r = completion_reward  # Last transition has its reward replaced
+                buffer.add(f_t, g_prime, a, r, f_tp1, done)
+
 
 
 def test(algorithm, env, n_tests=5):
@@ -173,11 +179,12 @@ def main(params):
         episode_rewards = []
         episode_transitions = []
         while train_steps < params['train_steps']:
-            env.render()
+            # env.render()
             action = algorithm.predict(np.hstack((obs_t, goal)))
             t += 1
             if isinstance(env, GridworldEnv):
                 obs_tp1, reward, done, _ = env.perform_step(action)
+                transition = (obs_t, goal, action, reward, obs_tp1, done)
             elif is_goal:
                 obs_tp1, reward, done, _, gr = env.step(action)
                 transition = (obs_t, goal, action, reward, obs_tp1, gr, done)
@@ -205,7 +212,8 @@ def main(params):
 
             obs_t = obs_tp1
 
-        add_transitions_to_buffer(episode_transitions, buffer, completion_reward=0.0, special_goal=is_goal)
+        special_goal = isinstance(env, CustomAcrobotEnv) or isinstance(env, SimpleAcrobotEnv)
+        add_transitions_to_buffer(episode_transitions, buffer, special_goal=special_goal)
         losses.append(np.mean(episode_loss))
         returns.append(np.sum(episode_rewards))
 
@@ -258,7 +266,7 @@ def plot_results(er, per, her, pher, params, episode_avg=10):
 
     plt.legend()
     plt.xlabel('Episodes')
-    plt.ylabel('Episode return')
+    plt.ylabel('Episode length')
     plt.show()
     quit()
     er_losses = np.array([np.array(l) for (_, l) in er])
@@ -275,7 +283,7 @@ if __name__ == '__main__':
                   'PER_beta': 0.4,
                   'algorithm': DQN,
                   'batch_size': 64,
-                  'hidden_size': (64,),
+                  'hidden_size': (32,),
                   'optimizer': Adam,
                   'loss_function': MSELoss,
                   'lr': 1e-3,
@@ -288,10 +296,10 @@ if __name__ == '__main__':
                   'test_every': 500,
                   'seed': 42}
 
-    er_results = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    per_results = [main(parameters) for _ in range(n)]
+    # er_results = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # per_results = [main(parameters) for _ in range(n)]
 
     parameters['buffer'] = HindsightReplayBuffer
     her_results = [main(parameters) for _ in range(n)]

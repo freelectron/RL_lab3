@@ -86,7 +86,7 @@ class DQN(object):
         self.optimizer.zero_grad()
         loss.backward()
         # Comment this one out if you dont want clipping
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        # torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item()
 
@@ -107,7 +107,7 @@ class DQN(object):
         loss = (losses * importance_weights).mean()
         # Backprop
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
+        # torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 1.0)
         self.optimizer.step()
         return loss.item(), torch.abs(predictions - targets).detach()
 
