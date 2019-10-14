@@ -63,7 +63,7 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0, specia
 
 
 
-def test(algorithm, env, n_tests=5):
+def test(algorithm, env, n_tests=10):
     episodes_length = []
 
     is_goal = True
@@ -147,7 +147,7 @@ def main(params):
                         optimizer=params['optimizer'],
                         lr=params['lr'],
                         gamma=params['gamma'],
-                        epsilon_delta=params['epsilon_delta'],
+                        epsilon_delta=1/(params['epsilon_delta_end']*params['train_steps']),
                         epsilon_min=params['epsilon_min'])
     elif params['algorithm'] == algo_DQN:
         algorithm = algo_DQN()
@@ -161,7 +161,7 @@ def main(params):
     episodes_length_test = []
 
     print('Starting to train:', type(buffer))
-    print(train_steps)
+    print('Train steps:', train_steps, 'Epsilon:', algorithm.epsilon)
     test_lengths = test(algorithm, env)
     episodes_length_test.append(test_lengths)
 
@@ -198,9 +198,8 @@ def main(params):
                 train_steps += 1
                 episode_loss.append(loss)
                 if train_steps % params['test_every'] == 0:
-                    print(train_steps)
                     test_lengths = test(algorithm, env)
-                    print('Epsilon:', algorithm.epsilon)
+                    print('Train steps:', train_steps, 'Epsilon:', algorithm.epsilon)
                     episodes_length_test.append(test_lengths)
             # termination condition
             if done:
@@ -276,7 +275,7 @@ def plot_results(er, per, her, pher, params, episode_avg=10):
 
 
 if __name__ == '__main__':
-    n = 5
+    n = 10
     parameters = {'buffer': ReplayBuffer,
                   'buffer_size': 1500,
                   'PER_alpha': 0.6,
@@ -288,18 +287,18 @@ if __name__ == '__main__':
                   'loss_function': MSELoss,
                   'lr': 1e-3,
                   'gamma': 0.99,
-                  'epsilon_delta': 5e-4,
-                  'epsilon_min': 0.10,
+                  'epsilon_delta_end': 0.5,
+                  'epsilon_min': 0.05,
                   'target_network_interval': 100,
                   'environment': 'windy_grid_world',
-                  'train_steps': 5000,
-                  'test_every': 500,
+                  'train_steps': 7500,
+                  'test_every': 100,
                   'seed': 42}
 
-    # er_results = [main(parameters) for _ in range(n)]
-    #
-    # parameters['buffer'] = PrioritizedReplayBuffer
-    # per_results = [main(parameters) for _ in range(n)]
+    er_results = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    per_results = [main(parameters) for _ in range(n)]
 
     parameters['buffer'] = HindsightReplayBuffer
     her_results = [main(parameters) for _ in range(n)]
