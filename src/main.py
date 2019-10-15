@@ -62,12 +62,9 @@ def add_transitions_to_buffer(transitions, buffer, completion_reward=0.0, specia
                 buffer.add(f_t, g_prime, a, r, f_tp1, done)
 
 
-
 def test(algorithm, env, n_tests=10):
     episodes_length = []
-
     is_goal = True
-    print('Testing...                            ')
     for i in range(n_tests):
         # print(i, '/', n_tests, end='\r')
         if isinstance(env, GridworldEnv):
@@ -161,7 +158,6 @@ def main(params):
     episodes_length_test = []
 
     print('Starting to train:', type(buffer))
-    print('Train steps:', train_steps, 'Epsilon:', algorithm.epsilon)
     test_lengths = test(algorithm, env)
     episodes_length_test.append(test_lengths)
 
@@ -199,14 +195,10 @@ def main(params):
                 episode_loss.append(loss)
                 if train_steps % params['test_every'] == 0:
                     test_lengths = test(algorithm, env)
-                    print('Train steps:', train_steps, 'Epsilon:', algorithm.epsilon)
                     episodes_length_test.append(test_lengths)
             # termination condition
             if done:
                 episodes_length.append(t)
-                # print('Episode finished in', t, 'steps')
-                # loss_print = np.mean(episode_loss) if episode_loss else 'NaN'
-                # print('Cum. reward:', np.sum(episode_rewards), 'Loss:', loss_print, 'Epsilon:', algorithm.epsilon)
                 break
 
             obs_t = obs_tp1
@@ -281,8 +273,8 @@ if __name__ == '__main__':
                   'PER_alpha': 0.6,
                   'PER_beta': 0.4,
                   'algorithm': DQN,
-                  'batch_size': 64,
-                  'hidden_size': (32,),
+                  'batch_size': 128,
+                  'hidden_size': (64,),
                   'optimizer': Adam,
                   'loss_function': MSELoss,
                   'lr': 1e-3,
@@ -290,7 +282,7 @@ if __name__ == '__main__':
                   'epsilon_delta_end': 0.5,
                   'epsilon_min': 0.05,
                   'target_network_interval': 100,
-                  'environment': 'windy_grid_world',
+                  'environment': 'acrobot_simple',
                   'train_steps': 7500,
                   'test_every': 100,
                   'seed': 42}
