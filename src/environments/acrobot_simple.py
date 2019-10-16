@@ -104,7 +104,7 @@ class SimpleAcrobotEnv(core.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
-        self.goal = np.array([-1.5])
+        self.goal = np.array([0.0])
         self.time = 0
         return self._get_ob(), self.goal
 

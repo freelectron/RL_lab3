@@ -104,10 +104,10 @@ def main(params):
     # declare environment
     is_goal = True
     if params['environment'] == 'acrobot_custom':
-        env = CustomAcrobotEnv(stochastic=False, max_steps=200)
+        env = CustomAcrobotEnv(stochastic=False, max_steps=400)
         s, goal = env.reset()
     elif params['environment'] == 'acrobot_simple':
-        env = SimpleAcrobotEnv(stochastic=False, max_steps=200)
+        env = SimpleAcrobotEnv(stochastic=False, max_steps=400)
         s, goal = env.reset()
     elif params['environment'] == 'windy_grid_world':
         env = GridworldEnv()
@@ -286,14 +286,20 @@ if __name__ == '__main__':
                   'train_steps': 7500,
                   'test_every': 100,
                   'seed': 42}
-
+    er_results = None
+    per_results = None
+    her_results = None
+    pher_results = None
     er_results = [main(parameters) for _ in range(n)]
+    # plot_results(er_results, per_results, her_results, pher_results, parameters)
 
     parameters['buffer'] = PrioritizedReplayBuffer
     per_results = [main(parameters) for _ in range(n)]
+    # plot_results(er_results, per_results, her_results, pher_results, parameters)
 
     parameters['buffer'] = HindsightReplayBuffer
     her_results = [main(parameters) for _ in range(n)]
+    # plot_results(er_results, per_results, her_results, pher_results, parameters)
 
     parameters['buffer'] = PrioritizedHindsightReplayBuffer
     pher_results = [main(parameters) for _ in range(n)]
