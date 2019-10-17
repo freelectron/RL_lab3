@@ -10,7 +10,7 @@ def plot_per(result_dict, params, fig_name='figure'):
         x = np.arange(0, returns.shape[1]*params['test_every'], params['test_every'])
         y = np.mean(returns, axis=0)
         color = colors[i]
-        plt.plot(x, y, color=color, label='Experience Replay')
+        plt.plot(x, y, color=color, label=name)
         y_std = np.std(returns, axis=0)
         plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
 

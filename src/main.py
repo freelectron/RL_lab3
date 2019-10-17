@@ -275,7 +275,7 @@ if __name__ == '__main__':
                   'PER_beta': 0.4,
                   'algorithm': DQN,
                   'batch_size': 128,
-                  'hidden_size': (64,),
+                  'hidden_size': (32,),
                   'optimizer': Adam,
                   'loss_function': MSELoss,
                   'lr': 1e-3,
@@ -308,100 +308,126 @@ if __name__ == '__main__':
     pher_results = [main(parameters) for _ in range(n)]
     plot_results(er_results, per_results, her_results, pher_results, parameters,  fig_name='wgw_9x9_PHER')
 
-    alpha_dict = {}
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.4
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.4'] = [main(parameters) for _ in range(n)]
+    # alpha_dict = {}
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.4
+    # alpha_dict['alpha = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.4
+    # alpha_dict['alpha = 0.6'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.4
+    # alpha_dict['alpha = 0.8'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 1.0
+    # parameters['beta'] = 0.4
+    # alpha_dict['alpha = 1.0'] = [main(parameters) for _ in range(n)]
+    # plot_per(alpha_dict, parameters, fig_name='wgw_9x9_PER_alpha')
 
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.6'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.8
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.8'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 1.0
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 1.0'] = [main(parameters) for _ in range(n)]
-    plot_per(alpha_dict, parameters, fig_name='wgw_9x9_PER_alpha')
-
-    beta_dict = {}
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.2
-    alpha_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.3
-    alpha_dict['beta = 0.3'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.4
-    alpha_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.5
-    alpha_dict['beta = 0.5'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.6
-    alpha_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
-    plot_per(beta_dict, parameters, fig_name='wgw_9x9_PER_beta')
-
-    alpha_dict = {}
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.4
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.4'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.6'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.8
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 0.8'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 1.0
-    parameters['beta'] = 0.4
-    alpha_dict['alpha = 1.0'] = [main(parameters) for _ in range(n)]
-    plot_per(alpha_dict, parameters, fig_name='wgw_9x9_PHER_alpha')
-
-    beta_dict = {}
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.2
-    alpha_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.3
-    alpha_dict['beta = 0.3'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.4
-    alpha_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.5
-    alpha_dict['beta = 0.5'] = [main(parameters) for _ in range(n)]
-
-    parameters['buffer'] = PrioritizedHindsightReplayBuffer
-    parameters['alpha'] = 0.6
-    parameters['beta'] = 0.6
-    alpha_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
-    plot_per(beta_dict, parameters, fig_name='wgw_9x9_PHER_beta')
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PER_alpha6')
+    #
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PER_alpha4')
+    #
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PER_alpha8')
+    #
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.6
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PHER_alpha6')
+    #
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.4
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PHER_alpha4')
+    #
+    # beta_dict = {}
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.2
+    # beta_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.4
+    # beta_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+    #
+    # parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    # parameters['alpha'] = 0.8
+    # parameters['beta'] = 0.6
+    # beta_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    # plot_per(beta_dict, parameters, fig_name='wgw_9x9_PHER_alpha8')
