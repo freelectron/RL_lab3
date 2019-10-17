@@ -42,7 +42,7 @@ class GridworldEnv(discrete.DiscreteEnv):
 
         return state_int, np.array([state_int_x, state_int_y])
 
-    def __init__(self, shape=[7, 7], t_max=100):
+    def __init__(self, shape=[9, 9], t_max=100):
         if not isinstance(shape, (list, tuple)) or not len(shape) == 2:
             raise ValueError('shape argument must be a list/tuple of length 2')
 

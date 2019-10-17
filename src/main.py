@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from environments.acrobot_custom import CustomAcrobotEnv
 from environments.acrobot_simple import SimpleAcrobotEnv
 from environments.gridworld_2 import GridworldEnv
-
+from plotting import plot_per
 
 def update(algorithm, buffer, params, train_steps):
     batch = buffer.sample(params['batch_size'])
@@ -212,7 +212,7 @@ def main(params):
     return episodes_length_test, returns, losses
 
 
-def plot_results(er, per, her, pher, params, episode_avg=10):
+def plot_results(er, per, her, pher, params, fig_name='figure'):
     er_returns = np.array([np.array(r) for (r, _, _) in er])
     # er_returns = np.array([np.mean(np.array(r).reshape((-1, episode_avg)), axis=1) for (r, _, _) in er])
     # er_returns = np.concatenate((np.zeros((er_returns.shape[0], 1)), er_returns), axis=1)
@@ -256,14 +256,15 @@ def plot_results(er, per, her, pher, params, episode_avg=10):
         plt.fill_between(x, y+y_std, y-y_std, color=color, alpha=0.4)
 
     plt.legend()
-    plt.xlabel('Episodes')
+    plt.xlabel('Training steps')
     plt.ylabel('Episode length')
-    plt.show()
-    quit()
-    er_losses = np.array([np.array(l) for (_, l) in er])
-    per_losses = np.array([np.array(l) for (_, l) in per])
-    her_losses = np.array([np.array(l) for (_, l) in her])
-    pher_losses = np.array([np.array(l) for (_, l) in pher])
+    plt.title('Grid world 9x9')
+    plt.savefig('results/' + fig_name + '.png')
+    plt.clf()
+    # er_losses = np.array([np.array(l) for (_, l) in er])
+    # per_losses = np.array([np.array(l) for (_, l) in per])
+    # her_losses = np.array([np.array(l) for (_, l) in her])
+    # pher_losses = np.array([np.array(l) for (_, l) in pher])
 
 
 if __name__ == '__main__':
@@ -282,7 +283,7 @@ if __name__ == '__main__':
                   'epsilon_delta_end': 0.5,
                   'epsilon_min': 0.05,
                   'target_network_interval': 100,
-                  'environment': 'acrobot_simple',
+                  'environment': 'windy_grid_world',
                   'train_steps': 7500,
                   'test_every': 100,
                   'seed': 42}
@@ -291,16 +292,116 @@ if __name__ == '__main__':
     her_results = None
     pher_results = None
     er_results = [main(parameters) for _ in range(n)]
-    # plot_results(er_results, per_results, her_results, pher_results, parameters)
+    plot_results(er_results, per_results, her_results, pher_results, parameters, fig_name='wgw_9x9_ER')
 
     parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.4
     per_results = [main(parameters) for _ in range(n)]
-    # plot_results(er_results, per_results, her_results, pher_results, parameters)
+    plot_results(er_results, per_results, her_results, pher_results, parameters, fig_name='wgw_9x9_PER')
 
     parameters['buffer'] = HindsightReplayBuffer
     her_results = [main(parameters) for _ in range(n)]
-    # plot_results(er_results, per_results, her_results, pher_results, parameters)
+    plot_results(er_results, per_results, her_results, pher_results, parameters, fig_name='wgw_9x9_HER')
 
     parameters['buffer'] = PrioritizedHindsightReplayBuffer
     pher_results = [main(parameters) for _ in range(n)]
-    plot_results(er_results, per_results, her_results, pher_results, parameters)
+    plot_results(er_results, per_results, her_results, pher_results, parameters,  fig_name='wgw_9x9_PHER')
+
+    alpha_dict = {}
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.4
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.4'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.6'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.8
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.8'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 1.0
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 1.0'] = [main(parameters) for _ in range(n)]
+    plot_per(alpha_dict, parameters, fig_name='wgw_9x9_PER_alpha')
+
+    beta_dict = {}
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.2
+    alpha_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.3
+    alpha_dict['beta = 0.3'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.4
+    alpha_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.5
+    alpha_dict['beta = 0.5'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.6
+    alpha_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    plot_per(beta_dict, parameters, fig_name='wgw_9x9_PER_beta')
+
+    alpha_dict = {}
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.4
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.4'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.6'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.8
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 0.8'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 1.0
+    parameters['beta'] = 0.4
+    alpha_dict['alpha = 1.0'] = [main(parameters) for _ in range(n)]
+    plot_per(alpha_dict, parameters, fig_name='wgw_9x9_PHER_alpha')
+
+    beta_dict = {}
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.2
+    alpha_dict['beta = 0.2'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.3
+    alpha_dict['beta = 0.3'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.4
+    alpha_dict['beta = 0.4'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.5
+    alpha_dict['beta = 0.5'] = [main(parameters) for _ in range(n)]
+
+    parameters['buffer'] = PrioritizedHindsightReplayBuffer
+    parameters['alpha'] = 0.6
+    parameters['beta'] = 0.6
+    alpha_dict['beta = 0.6'] = [main(parameters) for _ in range(n)]
+    plot_per(beta_dict, parameters, fig_name='wgw_9x9_PHER_beta')
