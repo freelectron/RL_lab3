@@ -85,7 +85,7 @@ class SimpleAcrobotEnv(core.Env):
     # CUSTOM: threshold for the angle ranges which get stochastic rewards, used in _get_reward()
     stochastic_threshold = 0.25
 
-    def __init__(self, stochastic=False, max_steps=200):
+    def __init__(self, stochastic=False, max_steps=200, mean_goal=-1.5):
         self.viewer = None
         high = np.array([1.0, 1.0, 1.0, 1.0, self.MAX_VEL_1, self.MAX_VEL_2])
         low = -high
@@ -95,6 +95,7 @@ class SimpleAcrobotEnv(core.Env):
         self.max_steps = max_steps
         self.state = None
         self.goal = None
+        self.mean_goal = mean_goal
         self.time = None
         self.seed()
 
@@ -104,7 +105,7 @@ class SimpleAcrobotEnv(core.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
-        self.goal = np.array([-1.5])
+        self.goal = np.array([np.random.uniform(low=self.mean_goal - 0.1, high=self.mean_goal + 0.1)])
         self.time = 0
         return self._get_ob(), self.goal
 
